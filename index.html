@@ -7,79 +7,63 @@
 <style>
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
-  body {
-    background: #091428; color: #f0e6d2;
-    font-family: "Microsoft JhengHei", Arial, sans-serif;
-    display: flex; flex-direction: column; height: 100dvh; overflow: hidden;
-  }
-  .topbar {
-    display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center;
-    padding: 8px 12px; background: #0a1220; border-bottom: 1px solid #c8aa6e;
-  }
+  body { background: #050b18; color: #f0e6d2; font-family: "Microsoft JhengHei", Arial, sans-serif;
+         display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
+  button { font-family: inherit; cursor: pointer; font-weight: bold; border-radius: 4px; }
+  input { font-family: inherit; }
+  .hidden { display: none; }
+ 
+  .topbar { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; padding: 8px 12px;
+            background: #0a1220; border-bottom: 1px solid #c8aa6e; }
   h1 { font-size: 17px; margin: 0 8px 0 0; color: #c8aa6e; text-shadow: 0 0 10px rgba(200,170,110,.5); }
-  .platform-btn, .change-btn, .cheer-btn, #intro button {
-    font-family: inherit; cursor: pointer; font-weight: bold; border-radius: 4px;
-  }
   .platform-btn { padding: 6px 12px; background: #1e2328; border: 1px solid #c8aa6e; color: #f0e6d2; }
   .platform-btn.active { background: #c8aa6e; color: #091428; }
-  .url-input {
-    padding: 6px 10px; width: 250px; max-width: 100%; border-radius: 4px; border: 1px solid #c8aa6e;
-    background: #1e2328; color: #f0e6d2; outline: none; font-size: 14px;
-  }
+  .url-input { padding: 6px 10px; width: 250px; max-width: 100%; border-radius: 4px; border: 1px solid #c8aa6e;
+               background: #1e2328; color: #f0e6d2; outline: none; font-size: 14px; }
   .change-btn { padding: 6px 14px; background: #c8aa6e; color: #091428; border: none; }
   .change-btn:hover { background: #f0e6d2; }
  
   #stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
-  #stage canvas { display: block; width: 100%; height: 100%; }
+  #viewport { position: absolute; inset: 0; touch-action: none;
+              background: radial-gradient(ellipse at 50% 25%, #0e2144 0%, #050b18 70%); }
+  #viewport.dragging iframe { pointer-events: none; }
  
-  /* 影片:位置由 JS 依 3D 大螢幕投影計算 */
-  #screen {
-    position: absolute; z-index: 2; background: #000;
-    border: 3px solid #c8aa6e; box-shadow: 0 0 24px rgba(0,204,255,.45);
-    border-radius: 4px; overflow: hidden;
-  }
-  #screen iframe { width: 100%; height: 100%; border: none; }
-  .hidden { display: none; }
+  /* 內嵌網站(1280x720,由 CSS3DRenderer 貼到 3D 大螢幕上,內容未更動) */
+  #screen-embed { width: 1280px; height: 720px; background: #000; }
+  #screen-embed iframe { width: 100%; height: 100%; border: none; }
  
-  #hint {
-    position: absolute; z-index: 3; left: 10px; bottom: 8px; font-size: 12px; opacity: .75;
-    background: rgba(9,20,40,.7); padding: 4px 8px; border-radius: 4px; pointer-events: none;
-  }
-  #toast {
-    position: absolute; z-index: 4; left: 50%; bottom: 40px; transform: translateX(-50%);
-    background: rgba(9,20,40,.92); border: 1px solid #c8aa6e; padding: 6px 14px; border-radius: 6px;
-    font-size: 14px; opacity: 0; transition: opacity .25s; pointer-events: none; white-space: nowrap;
-  }
+  .panel { position: absolute; z-index: 5; background: rgba(9,20,40,.9); border: 1px solid #c8aa6e; border-radius: 8px; }
+  #info { right: 10px; top: 8px; padding: 4px 10px; font-size: 13px; pointer-events: none; }
+  #hint { right: 10px; bottom: 8px; padding: 4px 8px; font-size: 12px; opacity: .75; pointer-events: none; }
+  #toast { left: 50%; top: 14px; transform: translateX(-50%); padding: 6px 14px; font-size: 14px;
+           opacity: 0; transition: opacity .25s; pointer-events: none; white-space: nowrap; }
  
-  /* 最下面一排:應援按鈕 */
-  .cheer-zone {
-    display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
-    padding: 8px; background: #0a1220; border-top: 1px solid #c8aa6e;
-  }
-  .cheer-btn {
-    background: linear-gradient(185deg, #1e2328 0%, #111315 100%);
-    border: 2px solid #c8aa6e; color: #f0e6d2; padding: 8px 14px; font-size: 14px;
-    transition: all .1s ease;
-  }
+  #profile { left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 22px 26px; text-align: center;
+             box-shadow: 0 0 40px rgba(200,170,110,.35); width: min(320px, 92%); }
+  #profile h2 { margin: 0 0 6px; color: #c8aa6e; font-size: 20px; }
+  #profile p { margin: 0 0 12px; font-size: 14px; }
+  #profile input { width: 100%; padding: 9px 12px; border-radius: 4px; border: 1px solid #c8aa6e;
+                   background: #091428; color: #f0e6d2; font-size: 16px; outline: none; text-align: center; }
+  .seg { display: flex; gap: 8px; margin: 12px 0; }
+  .seg button { flex: 1; padding: 9px; background: #1e2328; border: 1px solid #c8aa6e; color: #f0e6d2; font-size: 15px; }
+  .seg button.on { background: #c8aa6e; color: #091428; }
+  #enter-btn { width: 100%; padding: 10px; background: #e2012d; border: 1px solid #c8aa6e; color: #fff; font-size: 15px; }
+ 
+  #chat { left: 10px; bottom: 10px; width: min(330px, calc(100% - 20px)); display: flex; flex-direction: column; }
+  #chat-log { max-height: 150px; min-height: 60px; overflow-y: auto; padding: 8px; font-size: 13px; line-height: 1.5; word-break: break-all; }
+  #chat-log b { color: #c8aa6e; margin-right: 6px; }
+  #chat-log .sys { color: #8fa8c8; font-style: italic; }
+  #chat-row { display: flex; border-top: 1px solid rgba(200,170,110,.4); }
+  #chat-input { flex: 1; min-width: 0; padding: 8px; background: transparent; border: none; color: #f0e6d2; outline: none; font-size: 14px; }
+  #chat-send { padding: 0 14px; background: #c8aa6e; color: #091428; border: none; border-radius: 0 0 7px 0; }
+ 
+  .cheer-zone { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 8px;
+                background: #0a1220; border-top: 1px solid #c8aa6e; }
+  .cheer-btn { background: linear-gradient(185deg, #1e2328 0%, #111315 100%); border: 2px solid #c8aa6e;
+               color: #f0e6d2; padding: 8px 14px; font-size: 14px; transition: all .1s ease; }
   .cheer-btn:hover { background: #c8aa6e; color: #091428; box-shadow: 0 0 15px rgba(200,170,110,.8); }
   .cheer-btn:active { transform: scale(.95); }
-  .cheer-btn.sit { border-color: #00ccff; }
- 
-  #intro {
-    position: fixed; inset: 0; z-index: 20; background: rgba(5,11,24,.92);
-    display: flex; align-items: center; justify-content: center;
-  }
-  #intro .card {
-    background: #1e2328; border: 2px solid #c8aa6e; border-radius: 8px; padding: 26px 30px;
-    text-align: center; box-shadow: 0 0 30px rgba(200,170,110,.3); max-width: 90vw;
-  }
-  #intro h2 { margin: 0 0 8px; color: #c8aa6e; }
-  #intro p { margin: 0 0 14px; font-size: 14px; }
-  #intro input {
-    padding: 9px 12px; width: 220px; max-width: 100%; border-radius: 4px; border: 1px solid #c8aa6e;
-    background: #091428; color: #f0e6d2; font-size: 16px; outline: none; text-align: center;
-  }
-  #intro button { display: block; margin: 14px auto 0; padding: 9px 26px; background: #c8aa6e; color: #091428; border: none; font-size: 15px; }
+  .cheer-btn.sit { border-color: #8fa8c8; }
 </style>
 </head>
 <body>
@@ -90,144 +74,159 @@
   <button id="btn-twitch" class="platform-btn" onclick="switchPlatform('twitch')">Twitch 直播</button>
   <input type="text" id="video-input" class="url-input" placeholder="貼上 YouTube 網址 或 Twitch 頻道名稱">
   <button class="change-btn" onclick="changeStream()">載入頻道/影片</button>
+  <button class="platform-btn" id="btn-profile">👤 角色</button>
+  <button class="platform-btn" id="btn-rotate">🔄 自動環繞</button>
 </div>
  
 <div id="stage">
-  <div id="screen">
-    <iframe id="yt-player"
-      src="https://www.youtube.com/embed/qKwWfrVJBpk" title="YouTube video player"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-      referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-    <iframe id="twitch-player" class="hidden"
-      src="https://player.twitch.tv/?channel=lck&parent=peifen-prog.github.io&parent=localhost&parent=127.0.0.1"
-      allowfullscreen></iframe>
+  <div id="viewport">
+    <!-- 內嵌播放器:維持原本的 YouTube / Twitch iframe 設定 -->
+    <div id="screen-embed">
+      <iframe
+        id="yt-player"
+        src="https://www.youtube.com/embed/qKwWfrVJBpk"
+        title="YouTube video player"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allowfullscreen>
+      </iframe>
+      <iframe
+        id="twitch-player"
+        class="hidden"
+        src="https://player.twitch.tv/?channel=lck&parent=peifen-prog.github.io&parent=localhost&parent=127.0.0.1"
+        allowfullscreen>
+      </iframe>
+    </div>
   </div>
-  <div id="hint">點地面行走 · 點座位入座 · WASD / 方向鍵移動 · E 坐下/起立</div>
-  <div id="toast"></div>
+ 
+  <div id="info" class="panel"></div>
+  <div id="hint" class="panel">拖曳旋轉 · 滾輪縮放 · 點座位入座 · 點地面行走 · WASD 移動 · E 坐下/起立</div>
+  <div id="toast" class="panel"></div>
+ 
+  <div id="profile" class="panel">
+    <h2>歡迎來到 T1 觀賽影廳</h2>
+    <p>設定你的角色</p>
+    <input id="name-input" maxlength="12" placeholder="暱稱(中英皆可)">
+    <div class="seg">
+      <button data-g="m" class="on">♂ 男生</button>
+      <button data-g="f">♀ 女生</button>
+    </div>
+    <button id="enter-btn">進入影廳</button>
+  </div>
+ 
+  <div id="chat" class="panel">
+    <div id="chat-log"></div>
+    <div id="chat-row">
+      <input id="chat-input" maxlength="60" placeholder="輸入訊息,Enter 送出">
+      <button id="chat-send">送出</button>
+    </div>
+  </div>
 </div>
  
 <div class="cheer-zone">
-  <button class="cheer-btn sit" id="sit-btn" onclick="toggleSit()">🪑 坐下</button>
-  <button class="cheer-btn" onclick="cheer('加油！🔥')">應援 🔥</button>
-  <button class="cheer-btn" onclick="cheer('Penta Kill! ⚡')">五殺 ⚡</button>
-  <button class="cheer-btn" onclick="cheer('Solo kill ⚔️')">單殺 ⚔️</button>
-  <button class="cheer-btn" onclick="cheer('大皇蘭!')">TOP 🛡️</button>
-  <button class="cheer-btn" onclick="cheer('ONER!')">JUG 🌲</button>
-  <button class="cheer-btn" onclick="cheer('大相赫!')">MID 👑</button>
-  <button class="cheer-btn" onclick="cheer('少爺血C!')">ADC 🏹</button>
-  <button class="cheer-btn" onclick="cheer('世一輔!')">SUP 👁️</button>
-</div>
- 
-<div id="intro">
-  <div class="card">
-    <h2>歡迎來到觀賽 Party</h2>
-    <p>幫你的小人取個名字吧(中英皆可)</p>
-    <input id="name-input" maxlength="12" placeholder="例如:Faker 的粉絲" autofocus>
-    <button onclick="startGame()">進入場館</button>
-  </div>
+  <button class="cheer-btn sit" id="sit-btn">🪑 坐下</button>
+  <button class="cheer-btn" data-msg="加油！🔥" data-fx="gold">應援 🔥</button>
+  <button class="cheer-btn" data-msg="Penta Kill! ⚡" data-fx="rainbow">五殺 ⚡</button>
+  <button class="cheer-btn" data-msg="Solo kill ⚔️" data-fx="red">單殺 ⚔️</button>
+  <button class="cheer-btn" data-msg="大皇蘭!" data-fx="gold">TOP 🛡️</button>
+  <button class="cheer-btn" data-msg="ONER!" data-fx="gold">JUG 🌲</button>
+  <button class="cheer-btn" data-msg="大相赫!" data-fx="gold">MID 👑</button>
+  <button class="cheer-btn" data-msg="少爺血C!" data-fx="red">ADC 🏹</button>
+  <button class="cheer-btn" data-msg="世一輔!" data-fx="gold">SUP 👁️</button>
 </div>
  
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS3DRenderer.js"></script>
 <script>
-/* ========== 影片切換(沿用原本邏輯) ========== */
+'use strict';
+ 
+/* =====================================================================
+   0. 影片切換(沿用原本邏輯,未更動)
+   ===================================================================== */
 let currentPlatform = 'yt';
-function switchPlatform(p) {
-  currentPlatform = p;
-  document.getElementById('yt-player').classList.toggle('hidden', p !== 'yt');
-  document.getElementById('twitch-player').classList.toggle('hidden', p === 'yt');
-  document.getElementById('btn-yt').classList.toggle('active', p === 'yt');
-  document.getElementById('btn-twitch').classList.toggle('active', p !== 'yt');
+ 
+function switchPlatform(platform) {
+  currentPlatform = platform;
+  const ytPlayer = document.getElementById('yt-player');
+  const twitchPlayer = document.getElementById('twitch-player');
+  const btnYt = document.getElementById('btn-yt');
+  const btnTwitch = document.getElementById('btn-twitch');
+ 
+  if (platform === 'yt') {
+    ytPlayer.classList.remove('hidden');
+    twitchPlayer.classList.add('hidden');
+    btnYt.classList.add('active');
+    btnTwitch.classList.remove('active');
+  } else {
+    ytPlayer.classList.add('hidden');
+    twitchPlayer.classList.remove('hidden');
+    btnTwitch.classList.add('active');
+    btnYt.classList.remove('active');
+  }
 }
+ 
 function changeStream() {
   const input = document.getElementById('video-input').value.trim();
   if (!input) return;
+ 
   if (currentPlatform === 'yt') {
-    let id = input;
-    if (input.includes('v=')) id = input.split('v=')[1].split('&')[0];
-    else if (input.includes('youtu.be/')) id = input.split('youtu.be/')[1].split('?')[0];
-    else if (input.includes('embed/')) id = input.split('embed/')[1].split('?')[0];
-    document.getElementById('yt-player').src = `https://www.youtube.com/embed/${id}`;
+    let videoId = input;
+    if (input.includes('v=')) {
+      videoId = input.split('v=')[1].split('&')[0];
+    } else if (input.includes('youtu.be/')) {
+      videoId = input.split('youtu.be/')[1].split('?')[0];
+    } else if (input.includes('embed/')) {
+      videoId = input.split('embed/')[1].split('?')[0];
+    }
+    document.getElementById('yt-player').src = `https://www.youtube.com/embed/${videoId}`;
   } else {
-    if (/[\u4e00-\u9fa5]/.test(input)) {
+    const hasChinese = /[\u4e00-\u9fa5]/.test(input);
+    if (hasChinese) {
       window.open(`https://www.twitch.tv/search?term=${encodeURIComponent(input)}`, '_blank');
     } else {
-      let ch = input.replace('https://www.twitch.tv/', '').trim();
-      if (ch.includes('?')) ch = ch.split('?')[0];
-      document.getElementById('twitch-player').src =
-        `https://player.twitch.tv/?channel=${ch}&parent=peifen-prog.github.io&parent=localhost&parent=127.0.0.1`;
+      let channel = input.replace('https://www.twitch.tv/', '').trim();
+      if (channel.includes('?')) {
+        channel = channel.split('?')[0];
+      }
+      document.getElementById('twitch-player').src = `https://player.twitch.tv/?channel=${channel}&parent=peifen-prog.github.io&parent=localhost&parent=127.0.0.1`;
     }
   }
 }
  
-/* ========== 3D 場景 ========== */
-const stageEl = document.getElementById('stage');
-const screenEl = document.getElementById('screen');
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-stageEl.insertBefore(renderer.domElement, stageEl.firstChild);
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x050b18);
-scene.fog = new THREE.Fog(0x050b18, 55, 120);
-const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 200);
-camera.position.set(0, 13, 26);
-camera.lookAt(0, 7, -6);
+/* =====================================================================
+   1. 設定與共用工具
+   ===================================================================== */
+const CFG = {
+  SW: 24, SH: 13.5, SY: 9.25,                 // 大螢幕(16:9)尺寸與中心高度,位於 (0, 0)
+  ROWS: 4, COLS: 10,                          // 4 排 x 10 列 = 40 座位
+  R0: 16, ROW_D: 2.2,                         // 第一排弧形半徑、排距
+  STEP: 0.15, AISLE: 0.07,                    // 每個座位的間隔角度(弧度)、中間走道加寬角度
+  ZMIN: 5, RMAX: 26,                          // 可走範圍
+  SPEED: 5
+};
+const $ = s => document.querySelector(s);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const limit = (x, z) => {                      // 把位置限制在可走範圍內
+  x = clamp(x, -24, 24); z = Math.max(z, CFG.ZMIN);
+  const r = Math.hypot(x, z);
+  if (r > CFG.RMAX) { x *= CFG.RMAX / r; z = Math.max(CFG.ZMIN, z * CFG.RMAX / r); }
+  return { x, z };
+};
+const wrapPI = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
  
-scene.add(new THREE.AmbientLight(0x8fa8d0, 0.75));
-const sun = new THREE.DirectionalLight(0xffffff, 0.6); sun.position.set(6, 20, 15); scene.add(sun);
-const glow = new THREE.PointLight(0x33ccff, 1.1, 70); glow.position.set(0, 10, -10); scene.add(glow);
+// 簡易事件匯流排:之後要接 Firebase / WebSocket 多人同步,只要監聽這些事件
+const Bus = {
+  h: {},
+  on(e, f) { (this.h[e] = this.h[e] || []).push(f); },
+  emit(e, d) { (this.h[e] || []).forEach(f => f(d)); }
+};
  
-function box(w, h, d, color, x, y, z, parent = scene, emissive = 0x000000) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d),
-    new THREE.MeshLambertMaterial({ color, emissive }));
-  m.position.set(x, y, z); parent.add(m); return m;
+function box(w, h, d, color, x, y, z, parent, mat) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat || new THREE.MeshLambertMaterial({ color }));
+  m.position.set(x, y, z); (parent || Engine.scene).add(m); return m;
 }
- 
-// 場館尺寸
-const SW = 32, SH = 18, SY = 10.5, SZ = -15;     // 大螢幕(影片位置)
-const BX = 12, ZMIN = -11, ZMAX = 10.5;          // 可走範圍
-const ROW_Z0 = 3, ROW_D = 2.2, ROWS = 4, COLS = 10;
-const rowH = i => (i + 1) * 0.4;
- 
-const walkables = [];
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshLambertMaterial({ color: 0x0b1626 }));
-floor.rotation.x = -Math.PI / 2; scene.add(floor); walkables.push(floor);
-const grid = new THREE.GridHelper(60, 60, 0x1e3a5f, 0x10233b); grid.position.y = 0.02; scene.add(grid);
- 
-// 舞台與螢幕本體
-box(SW + 3, 1.2, 5, 0x141c2b, 0, 0.6, SZ + 1.5, scene, 0x05080f);
-box(SW + 1.6, SH + 1.6, 0.6, 0x10151f, 0, SY, SZ - 0.5, scene, 0x0a1a2e);
-box(SW + 3, 0.15, 0.3, 0xc8aa6e, 0, 1.25, SZ + 4, scene, 0x6b5320);
- 
-// 階梯座席平台
-for (let i = 0; i < ROWS; i++) {
-  const z = ROW_Z0 + i * ROW_D, h = rowH(i);
-  const p = box(26, h, ROW_D, 0x172234, 0, h / 2, z);
-  walkables.push(p);
-  box(26, 0.06, 0.1, 0xc8aa6e, 0, h + 0.02, z - ROW_D / 2, scene, 0x6b5320);
-}
-function groundY(z) {
-  const i = Math.floor((z - (ROW_Z0 - ROW_D / 2)) / ROW_D);
-  if (i < 0) return 0;
-  return rowH(Math.min(i, ROWS - 1));
-}
- 
-// 40 個座位(4 排 × 10 位,中間走道)
-const seats = [], seatMeshes = [];
-for (let r = 0; r < ROWS; r++) {
-  for (let c = 0; c < COLS; c++) {
-    const x = (c - 4.5) * 2.2 + (c < 5 ? -1.2 : 1.2);
-    const z = ROW_Z0 + r * ROW_D, y = rowH(r);
-    const g = new THREE.Group(); g.position.set(x, y, z); scene.add(g);
-    const s = { x, z, y, row: r, col: c };
-    const pad = box(1.2, 0.2, 1.0, 0xb3162d, 0, 0.4, 0, g);
-    const back = box(1.2, 1.0, 0.18, 0x2a2f3a, 0, 0.95, 0.52, g);
-    const leg = box(0.2, 0.3, 0.2, 0x444b57, 0, 0.15, 0, g);
-    [pad, back, leg].forEach(m => { m.userData.seat = s; seatMeshes.push(m); });
-    seats.push(s);
-  }
-}
- 
-/* ========== 小人 ========== */
-function rr(x, a, b, w, h, r) {
+function roundRect(x, a, b, w, h, r) {
   x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r);
   x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath();
 }
@@ -237,202 +236,579 @@ function textSprite(txt, o = {}) {
   const font = `bold ${size}px "Microsoft JhengHei", Arial, sans-serif`;
   x.font = font; const w = Math.ceil(x.measureText(txt).width) + 40;
   c.width = w; c.height = h; x.font = font;
-  x.fillStyle = 'rgba(9,20,40,.88)'; rr(x, 2, 2, w - 4, h - 4, 14); x.fill();
+  x.fillStyle = 'rgba(9,20,40,.88)'; roundRect(x, 2, 2, w - 4, h - 4, 14); x.fill();
   x.lineWidth = 3; x.strokeStyle = border; x.stroke();
   x.fillStyle = color; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(txt, w / 2, h / 2 + 2);
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false }));
   s.scale.set(sc * w / h, sc, 1); s.renderOrder = 10; return s;
 }
-function makePerson(shirt, name) {
-  const g = new THREE.Group(), pants = 0x222831, skin = 0xf1c9a5;
-  box(0.5, 0.65, 0.3, shirt, 0, 1.175, 0, g);
-  box(0.5, 0.2, 0.3, pants, 0, 0.9, 0, g);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 12), new THREE.MeshLambertMaterial({ color: skin }));
-  head.position.y = 1.72; g.add(head);
-  box(0.46, 0.12, 0.46, 0x1b1b1b, 0, 1.9, 0.02, g);
-  box(0.05, 0.07, 0.03, 0x111111, -0.08, 1.74, -0.2, g);
-  box(0.05, 0.07, 0.03, 0x111111, 0.08, 1.74, -0.2, g);
-  const leg = x => {
-    const h = new THREE.Group(); h.position.set(x, 0.85, 0); g.add(h);
-    box(0.2, 0.4, 0.2, pants, 0, -0.2, 0, h);
-    const k = new THREE.Group(); k.position.y = -0.4; h.add(k);
-    box(0.18, 0.4, 0.18, pants, 0, -0.2, 0, k);
-    box(0.2, 0.1, 0.28, 0xffffff, 0, -0.42, -0.04, k);
-    return { h, k };
-  };
-  const arm = x => {
-    const a = new THREE.Group(); a.position.set(x, 1.45, 0); g.add(a);
-    box(0.13, 0.55, 0.13, shirt, 0, -0.27, 0, a); return a;
-  };
-  const p = { legL: leg(-0.13), legR: leg(0.13), armL: arm(-0.35), armR: arm(0.35) };
-  const label = textSprite(name); label.position.y = 2.5; g.add(label);
-  g.userData = p; return g;
-}
  
+/* =====================================================================
+   2. Engine:WebGL + CSS3D 雙渲染器、OrbitControls、主迴圈
+   ===================================================================== */
+const Engine = (() => {
+  const viewport = $('#viewport'), stage = $('#stage');
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0x050b18, 55, 130);
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 300);
+  camera.position.set(0, 14, 38);
+ 
+  // WebGL 在上層(透明背景),CSS3D(iframe)在下層,透過「透明洞」讓影片從螢幕位置透出來
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setClearColor(0x000000, 0);
+  const cssR = new THREE.CSS3DRenderer();
+  Object.assign(cssR.domElement.style, { position: 'absolute', top: '0', left: '0', zIndex: '0' });
+  Object.assign(renderer.domElement.style, { position: 'absolute', top: '0', left: '0', zIndex: '1', pointerEvents: 'none' });
+  viewport.append(cssR.domElement, renderer.domElement);
+ 
+  const controls = new THREE.OrbitControls(camera, viewport);
+  controls.target.set(0, 6, 10);
+  controls.enablePan = false; controls.enableDamping = true; controls.dampingFactor = 0.08;
+  controls.minDistance = 6; controls.maxDistance = 70; controls.maxPolarAngle = Math.PI / 2 - 0.03;
+  controls.autoRotateSpeed = 1.2;
+  controls.update();
+ 
+  // 拖曳時暫時讓 iframe 不吃事件,避免滑鼠移到影片上就中斷旋轉
+  viewport.addEventListener('pointerdown', () => viewport.classList.add('dragging'));
+  addEventListener('pointerup', () => viewport.classList.remove('dragging'));
+ 
+  function resize() {
+    const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return;
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(w, h); cssR.setSize(w, h);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(resize).observe(stage); resize();
+ 
+  const tickers = [], clock = new THREE.Clock();
+  function start() {
+    (function loop() {
+      const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
+      controls.update();
+      tickers.forEach(f => f(dt, t));
+      cssR.render(scene, camera); renderer.render(scene, camera);
+      requestAnimationFrame(loop);
+    })();
+  }
+  return { scene, camera, controls, viewport, onTick: f => tickers.push(f), start };
+})();
+ 
+/* =====================================================================
+   3. Venue:場館、霓虹、大螢幕、座位
+   ===================================================================== */
+const Venue = (() => {
+  const { SW, SH, SY, ROWS, COLS, R0, ROW_D, STEP, AISLE } = CFG, scene = Engine.scene;
+  const walkables = [], seats = [], seatMeshes = [];
+  const rowH = i => (i + 1) * 0.4;
+  const SPAN = 4.5 * STEP + AISLE + 0.12;                       // 弧形座席區的半角度
+  const seatAngle = c => (c - 4.5) * STEP + (c < 5 ? -AISLE : AISLE);
+ 
+  // RGB 流動霓虹:保留彩虹漸層與流動,但混入白色降低飽和(粉彩感)
+  const neon = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 } }, side: THREE.DoubleSide,
+    vertexShader: 'varying vec3 vP; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vP = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+    fragmentShader: 'uniform float uTime; varying vec3 vP; void main(){ float h = fract((vP.x + vP.y * 1.3 + vP.z * 0.5) * 0.045 - uTime * 0.25); vec3 c = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0); gl_FragColor = vec4(mix(vec3(0.72), c, 0.55) * 0.95, 1.0); }'
+  });
+  let lights = [];
+ 
+  function build() {
+    scene.add(new THREE.AmbientLight(0x8fa8d0, 0.8));
+    const sun = new THREE.DirectionalLight(0xffffff, 0.5); sun.position.set(8, 25, 20); scene.add(sun);
+    lights = [[-14, 10, 6], [14, 10, 6], [0, 18, 8]].map(p => {
+      const l = new THREE.PointLight(0xffffff, 1.0, 60); l.position.set(...p); scene.add(l); return l;
+    });
+ 
+    // 地板、格線、霓虹圓環
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(80, 64), new THREE.MeshLambertMaterial({ color: 0x0b1626 }));
+    floor.rotation.x = -Math.PI / 2; scene.add(floor); walkables.push(floor);
+    const grid = new THREE.GridHelper(160, 80, 0x1e3a5f, 0x10233b); grid.position.y = 0.02; scene.add(grid);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(30, 30.4, 96), neon);
+    ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; scene.add(ring);
+ 
+    // 舞台 + 前緣霓虹
+    box(SW + 4, 1.2, 6, 0x141c2b, 0, 0.6, 1.5);
+    box(SW + 4, 0.14, 0.14, 0, 0, 1.25, 4.5, scene, neon);
+ 
+    // 大螢幕:背板(從背後看是實心)+ 透明洞 + CSS3D 內嵌播放器 + 霓虹邊框
+    box(SW + 1, SH + 1, 0.6, 0x0a0f18, 0, SY, -0.4);
+    const hole = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH),
+      new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0, blending: THREE.NoBlending }));
+    hole.position.set(0, SY, 0.02); scene.add(hole);
+    const embed = new THREE.CSS3DObject($('#screen-embed'));
+    embed.position.set(0, SY, 0); embed.scale.setScalar(SW / 1280); scene.add(embed);
+    box(SW + 1.6, 0.4, 0.7, 0, 0, SY + SH / 2 + 0.6, 0.1, scene, neon);
+    box(SW + 1.6, 0.4, 0.7, 0, 0, SY - SH / 2 - 0.6, 0.1, scene, neon);
+    box(0.4, SH + 1.6, 0.7, 0, -(SW / 2 + 0.6), SY, 0.1, scene, neon);
+    box(0.4, SH + 1.6, 0.7, 0, SW / 2 + 0.6, SY, 0.1, scene, neon);
+ 
+    // 兩側光束(柔和粉彩色)
+    [-1, 1].forEach(sd => {
+      const m = new THREE.Mesh(new THREE.ConeGeometry(3.2, 24, 24, 1, true), new THREE.MeshBasicMaterial({
+        color: sd < 0 ? 0xff8fa3 : 0x8fcfff, transparent: true, opacity: 0.07,
+        blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+      m.position.set(sd * (SW / 2 + 3), 11, 5); m.rotation.x = -0.5; scene.add(m);
+    });
+ 
+    // ===== 低調藍光:圍繞螢幕、座位區、外圍 =====
+    const BLUE = 0x3d8bff;
+    const glowTex = (() => {
+      const c = document.createElement('canvas'); c.width = c.height = 128;
+      const x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+      g.addColorStop(0, 'rgba(80,150,255,.55)'); g.addColorStop(0.55, 'rgba(60,120,255,.3)'); g.addColorStop(1, 'rgba(40,100,255,0)');
+      x.fillStyle = g; x.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c);
+    })();
+    const glowMat = () => new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    // 螢幕:背後光暈 + 兩側藍色光柱 + 舞台前方地面藍光
+    const halo = new THREE.Mesh(new THREE.PlaneGeometry(SW + 16, SH + 12), glowMat()); halo.position.set(0, SY, -1); scene.add(halo);
+    [-1, 1].forEach(sd => box(0.25, SH + 3, 0.25, BLUE, sd * (SW / 2 + 2.4), SY, 0.1, scene, new THREE.MeshBasicMaterial({ color: BLUE })));
+    const fg = new THREE.Mesh(new THREE.PlaneGeometry(44, 16), glowMat());
+    fg.rotation.x = -Math.PI / 2; fg.position.set(0, 0.06, 8); scene.add(fg);
+    // 環形藍光(中心亮、向外淡出)
+    const ringGlow = (rIn, rOut, a0, len, dir) => {
+      const m = new THREE.Mesh(new THREE.RingGeometry(rIn, rOut, 96, 1, a0, len), new THREE.ShaderMaterial({
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+        uniforms: { uIn: { value: rIn }, uOut: { value: rOut }, uDir: { value: dir } },
+        vertexShader: 'varying float vR; void main(){ vR = length(position.xy); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+        fragmentShader: 'uniform float uIn; uniform float uOut; uniform float uDir; varying float vR; void main(){ float t = clamp((vR - uIn) / (uOut - uIn), 0.0, 1.0); if (uDir < 0.0) t = 1.0 - t; gl_FragColor = vec4(0.24, 0.55, 1.0, pow(1.0 - t, 2.0) * 0.5); }'
+      }));
+      m.rotation.x = -Math.PI / 2; m.position.y = 0.05; scene.add(m);
+    };
+    // 外圍:大圓環藍光 + 一圈細光柱
+    ringGlow(30, 37, 0, Math.PI * 2, 1);
+    ringGlow(26, 30, 0, Math.PI * 2, -1);
+    for (let k = 0; k < 16; k++) {
+      const a = k / 16 * Math.PI * 2;
+      const pil = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 12, 8, 1, true), new THREE.MeshBasicMaterial({
+        color: BLUE, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
+      pil.position.set(32 * Math.sin(a), 6, 32 * Math.cos(a)); scene.add(pil);
+    }
+    // 座位區:弧形座席內外兩側地面藍光 + 偏藍的補光
+    const rOut = R0 + (ROWS - 1) * ROW_D + ROW_D / 2, rIn = R0 - ROW_D / 2, sa0 = -SPAN - Math.PI / 2;
+    ringGlow(rOut, rOut + 3.5, sa0, SPAN * 2, 1);
+    ringGlow(rIn - 3, rIn, sa0, SPAN * 2, -1);
+    [[0, 7, 3], [-16, 5, 12], [16, 5, 12]].forEach(q => {
+      const l = new THREE.PointLight(BLUE, 0.6, 45); l.position.set(...q); scene.add(l);
+    });
+ 
+    // 弧形階梯座席:以螢幕為圓心,一排一排往外、往上
+    for (let r = 0; r < ROWS; r++) {
+      const R = R0 + r * ROW_D, h = rowH(r), a0 = -SPAN - Math.PI / 2, a1 = SPAN - Math.PI / 2;
+      const shape = new THREE.Shape();
+      shape.absarc(0, 0, R + ROW_D / 2, a0, a1, false);
+      shape.absarc(0, 0, R - ROW_D / 2, a1, a0, true);
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false, curveSegments: 48 });
+      geo.rotateX(-Math.PI / 2);
+      const plat = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x172234, side: THREE.DoubleSide }));
+      scene.add(plat); walkables.push(plat);
+      const edge = new THREE.Mesh(new THREE.RingGeometry(R - ROW_D / 2 - 0.1, R - ROW_D / 2, 64, 1, a0, a1 - a0), neon);
+      edge.rotation.x = -Math.PI / 2; edge.position.y = h + 0.02; scene.add(edge);
+      const blueLine = new THREE.Mesh(new THREE.RingGeometry(R + ROW_D / 2 - 0.15, R + ROW_D / 2, 64, 1, a0, a1 - a0),
+        new THREE.MeshBasicMaterial({ color: BLUE, side: THREE.DoubleSide }));
+      blueLine.rotation.x = -Math.PI / 2; blueLine.position.y = h + 0.02; scene.add(blueLine);
+ 
+      for (let c = 0; c < COLS; c++) {
+        const th = seatAngle(c), sn = Math.sin(th), cs = Math.cos(th), x = R * sn, z = R * cs;
+        const g = new THREE.Group(); g.position.set(x, h, z); g.rotation.y = th; scene.add(g);   // 椅子面向圓心(螢幕)
+        const seat = { x, z, y: h, row: r, col: c, id: seats.length, occ: null, yaw: th, sn, cs };
+        const pad = box(1.2, 0.2, 1.0, 0xb3162d, 0, 0.4, 0, g);
+        const back = box(1.2, 1.0, 0.18, 0x2a2f3a, 0, 0.95, 0.52, g);
+        const leg = box(0.2, 0.3, 0.2, 0x444b57, 0, 0.15, 0, g);
+        seat.mat = pad.material;
+        [pad, back, leg].forEach(m => { m.userData.seat = seat; seatMeshes.push(m); });
+        seats.push(seat);
+      }
+    }
+  }
+  function groundY(x, z) {
+    const r = Math.hypot(x, z), th = Math.atan2(x, z);
+    if (z <= 0 || Math.abs(th) > SPAN) return 0;
+    const i = Math.floor((r - (R0 - ROW_D / 2)) / ROW_D);
+    return i < 0 || i >= ROWS ? 0 : rowH(i);
+  }
+  function tick(dt, t) {
+    neon.uniforms.uTime.value = t;
+    lights.forEach((l, i) => l.color.setHSL((t * 0.1 + i / 3) % 1, 0.55, 0.6));
+  }
+  return { build, tick, groundY, walkables, seats, seatMeshes };
+})();
+ 
+/* =====================================================================
+/* =====================================================================
+   4. Seats:座位佔用狀態(紅 = 空位,金 = 已佔用)
+   ===================================================================== */
+const Seats = (() => {
+  const FREE = 0xb3162d, TAKEN = 0xc8aa6e;
+  const front = s => ({ x: s.x - 0.85 * s.sn, z: s.z - 0.85 * s.cs });   // 座位前方(朝圓心)
+  const paint = s => { s.mat.color.setHex(s.occ ? TAKEN : FREE); s.mat.emissive.setHex(s.occ ? 0x5a4310 : 0); };
+  const taken = (s, o) => !!s.occ && s.occ !== o;
+  function sit(o, s) {
+    if (taken(s, o)) return false;
+    s.occ = o; o.seat = s; o.lastSeat = s; o.target = null; o.pending = null; o.yawT = s.yaw;
+    paint(s); Bus.emit('seats'); return true;
+  }
+  function stand(o) {
+    const s = o.seat; if (!s) return;
+    const f = front(s); o.x = f.x; o.z = f.z; s.occ = null; o.seat = null;
+    paint(s); Bus.emit('seats');
+  }
+  const count = () => Venue.seats.filter(s => s.occ).length;
+  return { front, sit, stand, taken, count };
+})();
+ 
+/* =====================================================================
+   5. Avatar:男 / 女 T1 隊服角色(黑 + 紅 + 金)
+   ===================================================================== */
+const Avatar = (() => {
+  const SKIN = 0xf1c9a5, BLACK = 0x15171c, RED = 0xe2012d, GOLD = 0xc8aa6e;
+  function badge(txt, w, h) {
+    const c = document.createElement('canvas'); c.width = 128; c.height = 96;
+    const x = c.getContext('2d');
+    x.font = '900 70px Arial'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.lineWidth = 8; x.strokeStyle = '#e2012d'; x.strokeText(txt, 64, 52);
+    x.fillStyle = '#c8aa6e'; x.fillText(txt, 64, 52);
+    return new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+      new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
+  }
+  function build(gender) {
+    const f = gender === 'f', g = new THREE.Group();
+    const tw = f ? 0.44 : 0.58, td = f ? 0.28 : 0.32, ax = f ? 0.31 : 0.41, aw = f ? 0.11 : 0.14, lw = f ? 0.17 : 0.22;
+    const hair = f ? 0x4a2a1c : 0x15120f;
+ 
+    // 外套:黑底 + 紅色拉鍊條 + 金色領口/下擺
+    box(tw, 0.66, td, BLACK, 0, 1.18, 0, g);
+    box(0.07, 0.66, td + 0.02, RED, 0, 1.18, 0, g);
+    box(tw + 0.02, 0.07, td + 0.02, GOLD, 0, 1.5, 0, g);
+    box(tw + 0.02, 0.06, td + 0.02, GOLD, 0, 0.88, 0, g);
+    const fb = badge('T1', 0.2, 0.15); fb.position.set(-tw * 0.25, 1.32, -(td / 2 + 0.013)); fb.rotation.y = Math.PI; g.add(fb);
+    const bb = badge('T1', 0.38, 0.29); bb.position.set(0, 1.27, td / 2 + 0.013); g.add(bb);   // 背面大 T1(從後方觀看最明顯)
+ 
+    // 下半身:男 = 長褲,女 = 短裙(輪廓差異)
+    if (f) { box(tw + 0.2, 0.22, td + 0.1, BLACK, 0, 0.84, 0, g); box(tw + 0.22, 0.04, td + 0.12, RED, 0, 0.73, 0, g); }
+    else box(tw, 0.2, td, BLACK, 0, 0.9, 0, g);
+ 
+    // 頭、五官、髮型
+    const head = new THREE.Mesh(new THREE.SphereGeometry(f ? 0.21 : 0.22, 16, 12), new THREE.MeshLambertMaterial({ color: SKIN }));
+    head.position.y = f ? 1.71 : 1.72; g.add(head);
+    box(0.05, 0.07, 0.03, 0x111111, -0.08, 1.74, -0.2, g);
+    box(0.05, 0.07, 0.03, 0x111111, 0.08, 1.74, -0.2, g);
+    box(0.46, 0.13, 0.46, hair, 0, 1.9, 0.01, g);
+    if (f) {
+      box(0.44, 0.08, 0.06, hair, 0, 1.84, -0.21, g);          // 瀏海
+      box(0.5, 0.62, 0.12, hair, 0, 1.5, 0.2, g);             // 長髮
+      box(0.47, 0.04, 0.47, RED, 0, 1.86, 0, g);              // 紅髮帶
+    } else {
+      box(0.46, 0.22, 0.1, hair, 0, 1.76, 0.2, g);            // 後腦短髮
+    }
+ 
+    // 腿(大腿 + 小腿,可彎曲)與紅色球鞋
+    const leg = x => {
+      const h = new THREE.Group(); h.position.set(x, 0.85, 0); g.add(h);
+      box(lw, 0.4, lw, BLACK, 0, -0.2, 0, h);
+      const k = new THREE.Group(); k.position.y = -0.4; h.add(k);
+      box(lw - 0.02, 0.4, lw - 0.02, BLACK, 0, -0.2, 0, k);
+      box(lw, 0.1, 0.28, RED, 0, -0.42, -0.04, k);
+      return { h, k };
+    };
+    // 手臂:黑袖 + 紅袖口 + 手
+    const arm = x => {
+      const a = new THREE.Group(); a.position.set(x, 1.45, 0); g.add(a);
+      box(aw, 0.42, aw, BLACK, 0, -0.21, 0, a);
+      box(aw + 0.01, 0.1, aw + 0.01, RED, 0, -0.46, 0, a);
+      box(aw - 0.02, 0.1, aw - 0.02, SKIN, 0, -0.56, 0, a);
+      return a;
+    };
+    g.userData = { legL: leg(-lw * 0.6), legR: leg(lw * 0.6), armL: arm(-ax), armR: arm(ax) };
+    return g;
+  }
+  return { build };
+})();
+ 
+/* =====================================================================
+   6. Actors:移動、坐下/起立動作、頭頂氣泡(玩家與 NPC 共用)
+   ===================================================================== */
 let me = null;
-function startGame() {
-  const input = document.getElementById('name-input');
-  const name = input.value.trim().slice(0, 12) || ('Fan' + (100 + Math.floor(Math.random() * 900)));
-  const g = makePerson(0xe2012d, name);   // T1 紅色球衣
-  g.position.set(0, 0, -6); scene.add(g);
-  me = { g, x: 0, z: -6, yCur: 0, yaw: Math.PI, yawT: 0, target: null, pending: null,
-         seat: null, lastSeat: null, sitT: 0, phase: 0, walk: 0, bubbles: [] };
-  me.yaw = 0;
-  document.getElementById('intro').style.display = 'none';
-  toast(`${name},歡迎入場!點地面走動、點座位入座`);
-}
-document.getElementById('name-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.isComposing) startGame();
-});
- 
-/* ========== 互動 ========== */
-const keys = {};
-const keyMap = { ArrowUp: 'up', w: 'up', W: 'up', ArrowDown: 'down', s: 'down', S: 'down',
-                 ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right' };
-addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT' || !me) return;
-  if (keyMap[e.key]) { keys[keyMap[e.key]] = true; e.preventDefault(); }
-  if (e.key === 'e' || e.key === 'E') toggleSit();
-});
-addEventListener('keyup', e => { if (keyMap[e.key]) keys[keyMap[e.key]] = false; });
- 
-let toastT;
-function toast(msg) {
-  const t = document.getElementById('toast'); t.textContent = msg; t.style.opacity = 1;
-  clearTimeout(toastT); toastT = setTimeout(() => t.style.opacity = 0, 2200);
-}
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const frontOf = s => ({ x: s.x, z: s.z - 0.85 });
- 
-function goToSeat(s) {
-  if (!me || me.seat === s) return;
-  if (me.seat) standUp();
-  me.target = frontOf(s); me.pending = s;
-}
-function standUp() {
-  if (!me || !me.seat) return;
-  const f = frontOf(me.seat); me.x = f.x; me.z = f.z; me.seat = null;
-}
-function sitDown(s) {
-  me.seat = s; me.lastSeat = s; me.target = null; me.pending = null;
-  toast(`已入座:第 ${s.row + 1} 排 ${s.col + 1} 號`);
-}
-function toggleSit() {
-  if (!me) return;
-  if (me.seat) { standUp(); return; }
-  let best = null, bd = 1e9;
-  for (const s of seats) {
-    const f = frontOf(s), d = Math.hypot(f.x - me.x, f.z - me.z);
-    if (d < bd) { bd = d; best = s; }
+const Actors = (() => {
+  const list = [];
+  const STYLE = {
+    chat: { color: '#ffffff', border: '#c8aa6e', size: 38, h: 60, sc: 0.62 },
+    cheer: { color: '#f5d98a', border: '#c8aa6e', size: 44, h: 72, sc: 0.75 }
+  };
+  function skin(o) {
+    if (o.g) Engine.scene.remove(o.g);
+    o.bubbles = [];
+    o.g = Avatar.build(o.gender);
+    const lab = textSprite(o.name); lab.position.y = 2.5; o.g.add(lab);
+    Engine.scene.add(o.g);
   }
-  if (best && bd < 4.5) goToSeat(best);
-  else toast('附近沒有座位,先走到座位區吧');
-}
- 
-const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
-renderer.domElement.addEventListener('click', e => {
-  if (!me) return;
-  const r = renderer.domElement.getBoundingClientRect();
-  ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-  ray.setFromCamera(ndc, camera);
-  const hit = ray.intersectObjects([...seatMeshes, ...walkables])[0];
-  if (!hit) return;
-  if (hit.object.userData.seat) { goToSeat(hit.object.userData.seat); return; }
-  if (me.seat) standUp();
-  me.pending = null;
-  me.target = { x: clamp(hit.point.x, -BX, BX), z: clamp(hit.point.z, ZMIN, ZMAX) };
-});
- 
-// 頭上浮動文字
-function cheer(msg) {
-  if (!me) return;
-  const s = textSprite(msg, { color: '#00ffcc', border: '#00ffcc', size: 44, h: 72, sc: 0.75 });
-  me.g.add(s); me.bubbles.unshift({ s, t: 0 });
-  if (me.bubbles.length > 4) { const old = me.bubbles.pop(); me.g.remove(old.s); }
-}
- 
-/* ========== 主迴圈 ========== */
-const wrapPI = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
-const sitBtn = document.getElementById('sit-btn');
- 
-function update(dt) {
-  if (!me) return;
-  const mvx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), mvz = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
-  const want = mvx || mvz;
-  if (want) { if (me.seat) standUp(); me.target = null; me.pending = null; }
- 
-  me.sitT = clamp(me.sitT + (me.seat ? 1 : -1) * dt * 3, 0, 1);
-  let moving = false;
-  if (!me.seat && me.sitT < 0.02) {
-    let dx = 0, dz = 0, step = 5 * dt;
-    if (want) { const l = Math.hypot(mvx, mvz); dx = mvx / l; dz = mvz / l; }
-    else if (me.target) {
-      const ex = me.target.x - me.x, ez = me.target.z - me.z, d = Math.hypot(ex, ez);
-      if (d < 0.1) { me.target = null; if (me.pending) sitDown(me.pending); }
-      else { dx = ex / d; dz = ez / d; step = Math.min(step, d); }
-    }
-    if (dx || dz) {
-      me.x = clamp(me.x + dx * step, -BX, BX); me.z = clamp(me.z + dz * step, ZMIN, ZMAX);
-      me.yawT = Math.atan2(-dx, -dz); moving = true;
+  function make(name, gender, x, z) {
+    const o = { name, gender, x, z, yCur: Venue.groundY(x, z), yaw: 0, yawT: 0, target: null, pending: null,
+                seat: null, lastSeat: null, sitT: 0, phase: 0, walk: 0, bubbles: [] };
+    skin(o); list.push(o); return o;
+  }
+  function bubble(o, msg, kind) {
+    const text = msg.length > 20 ? msg.slice(0, 20) + '…' : msg;
+    const s = textSprite(text, STYLE[kind || 'chat']);
+    o.g.add(s); o.bubbles.unshift({ s, t: 0 });
+    if (o.bubbles.length > 4) o.g.remove(o.bubbles.pop().s);
+  }
+  function tickBubbles(o, dt) {
+    for (let i = o.bubbles.length - 1; i >= 0; i--) {
+      const b = o.bubbles[i]; b.t += dt;
+      b.s.position.y = 3.2 + i * 0.8 + b.t * 0.12;
+      b.s.material.opacity = b.t > 4.2 ? Math.max(0, 1 - (b.t - 4.2) / 0.6) : 1;
+      if (b.t > 4.8) { o.g.remove(b.s); b.s.material.map.dispose(); b.s.material.dispose(); o.bubbles.splice(i, 1); }
     }
   }
-  const sitting = me.seat || me.sitT > 0;
-  me.yaw += wrapPI((sitting ? 0 : me.yawT) - me.yaw) * Math.min(1, dt * 10);
-  me.yCur += (groundY(me.z) - me.yCur) * Math.min(1, dt * 14);
+  function step(o, dt, dir) {
+    o.sitT = clamp(o.sitT + (o.seat ? 1 : -1) * dt * 3, 0, 1);
+    let moving = false;
+    if (!o.seat && o.sitT < 0.02) {
+      let dx = 0, dz = 0, st = CFG.SPEED * dt;
+      if (dir) { dx = dir.x; dz = dir.z; }
+      else if (o.target) {
+        const ex = o.target.x - o.x, ez = o.target.z - o.z, d = Math.hypot(ex, ez);
+        if (d < 0.1) {
+          o.target = null;
+          if (o.pending) { const s = o.pending; o.pending = null; if (!Seats.sit(o, s) && o === me) UI.toast('這個座位剛被人坐走了'); }
+        } else { dx = ex / d; dz = ez / d; st = Math.min(st, d); }
+      }
+      if (dx || dz) {
+        const np = limit(o.x + dx * st, o.z + dz * st); o.x = np.x; o.z = np.z;
+        o.yawT = Math.atan2(-dx, -dz); moving = true;
+      }
+    }
+    const sitting = o.seat || o.sitT > 0;
+    o.yaw += wrapPI((sitting ? (o.lastSeat ? o.lastSeat.yaw : 0) : o.yawT) - o.yaw) * Math.min(1, dt * 10);
+    o.yCur += (Venue.groundY(o.x, o.z) - o.yCur) * Math.min(1, dt * 14);
  
-  const e = me.sitT * me.sitT * (3 - 2 * me.sitT);
-  let px = me.x, pz = me.z, py = me.yCur;
-  if (me.lastSeat && e > 0) {
-    const s = me.lastSeat;
-    px += (s.x - me.x) * e; pz += (s.z + 0.1 - me.z) * e; py += (s.y - 0.32 - me.yCur) * e;
+    const e = o.sitT * o.sitT * (3 - 2 * o.sitT);
+    let px = o.x, pz = o.z, py = o.yCur;
+    if (o.lastSeat && e > 0) {
+      const s = o.lastSeat;
+      px += (s.x + 0.1 * s.sn - o.x) * e; pz += (s.z + 0.1 * s.cs - o.z) * e; py += (s.y - 0.32 - o.yCur) * e;
+    }
+    o.walk += ((moving ? 1 : 0) - o.walk) * Math.min(1, dt * 10);
+    if (moving) o.phase += dt * 10;
+    const sw = Math.sin(o.phase) * 0.8 * o.walk * (1 - e), H = Math.PI / 2;
+    py += Math.abs(Math.sin(o.phase)) * 0.05 * o.walk;
+    o.g.position.set(px, py, pz); o.g.rotation.y = o.yaw;
+    const p = o.g.userData;
+    p.legL.h.rotation.x = sw + e * H; p.legR.h.rotation.x = -sw + e * H;
+    p.legL.k.rotation.x = p.legR.k.rotation.x = -e * H;
+    p.armL.rotation.x = -sw - e * 0.4; p.armR.rotation.x = sw - e * 0.4;
+    tickBubbles(o, dt);
   }
-  me.walk += ((moving ? 1 : 0) - me.walk) * Math.min(1, dt * 10);
-  if (moving) me.phase += dt * 10;
-  const sw = Math.sin(me.phase) * 0.8 * me.walk * (1 - e);
-  py += Math.abs(Math.sin(me.phase)) * 0.05 * me.walk;
-  me.g.position.set(px, py, pz); me.g.rotation.y = me.yaw;
-  const p = me.g.userData, H = Math.PI / 2;
-  p.legL.h.rotation.x = sw + e * H; p.legR.h.rotation.x = -sw + e * H;
-  p.legL.k.rotation.x = p.legR.k.rotation.x = -e * H;
-  p.armL.rotation.x = -sw - e * 0.4; p.armR.rotation.x = sw - e * 0.4;
+  return { list, make, skin, bubble, step };
+})();
  
-  for (let i = me.bubbles.length - 1; i >= 0; i--) {
-    const b = me.bubbles[i]; b.t += dt;
-    b.s.position.y = 3.2 + i * 0.8 + b.t * 0.12;
-    b.s.material.opacity = b.t > 2.6 ? Math.max(0, 1 - (b.t - 2.6) / 0.6) : 1;
-    if (b.t > 3.2) { me.g.remove(b.s); b.s.material.map.dispose(); b.s.material.dispose(); me.bubbles.splice(i, 1); }
+/* =====================================================================
+   7. FX:金光 / 煙火粒子
+   ===================================================================== */
+const FX = (() => {
+  const N = 900;
+  const pos = new Float32Array(N * 3), col = new Float32Array(N * 3), base = new Float32Array(N * 3),
+        vel = new Float32Array(N * 3), life = new Float32Array(N);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.3, 'rgba(255,255,255,.6)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({
+    size: 0.45, map: new THREE.CanvasTexture(c), vertexColors: true, transparent: true,
+    blending: THREE.AdditiveBlending, depthWrite: false }));
+  pts.frustumCulled = false; Engine.scene.add(pts);
+ 
+  const PAL = { gold: [[1, 0.85, 0.35], [1, 0.62, 0.12], [1, 0.95, 0.7]], red: [[1, 0.12, 0.2], [1, 0.5, 0.35], [1, 0.92, 0.9]],
+                mix: [[1, 0.85, 0.35], [1, 0.15, 0.2], [1, 0.95, 0.75]] };
+  let head = 0; const tmp = new THREE.Color();
+  function burst(o, kind) {
+    const big = kind === 'rainbow', n = big ? 200 : 110;
+    for (let k = 0; k < n; k++) {
+      const i = head++ % N, a = Math.random() * Math.PI * 2, u = Math.random() * 2 - 1, r = Math.sqrt(1 - u * u);
+      const sp = 3 + Math.random() * (big ? 7 : 5);
+      pos.set([o.x, o.y, o.z], i * 3);
+      vel.set([Math.cos(a) * r * sp, u * sp + 2, Math.sin(a) * r * sp], i * 3);
+      if (big) { tmp.setHSL(Math.random(), 0.65, 0.68); base.set([tmp.r, tmp.g, tmp.b], i * 3); }
+      else base.set(PAL[kind || 'gold'][k % 3], i * 3);
+      life[i] = 1 + Math.random() * 0.7;
+    }
   }
-  const label = me.seat ? '🧍 起立' : '🪑 坐下';
-  if (sitBtn.textContent !== label) sitBtn.textContent = label;
-}
- 
-// 把 3D 大螢幕的位置投影到畫面上,讓 YouTube / Twitch 貼合在場館最前方
-function layoutScreen() {
-  camera.updateMatrixWorld();
-  const w = stageEl.clientWidth, h = stageEl.clientHeight;
-  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-  for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-    const v = new THREE.Vector3(sx * SW / 2, SY + sy * SH / 2, SZ).project(camera);
-    const px = (v.x + 1) / 2 * w, py = (1 - v.y) / 2 * h;
-    x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py);
+  function tick(dt) {
+    for (let i = 0; i < N; i++) {
+      const j = i * 3;
+      if (life[i] > 0) {
+        life[i] -= dt; vel[j + 1] -= 7 * dt; vel[j] *= 0.985; vel[j + 2] *= 0.985;
+        pos[j] += vel[j] * dt; pos[j + 1] += vel[j + 1] * dt; pos[j + 2] += vel[j + 2] * dt;
+        const f = clamp(life[i], 0, 1);
+        col[j] = base[j] * f; col[j + 1] = base[j + 1] * f; col[j + 2] = base[j + 2] * f;
+      } else { col[j] = col[j + 1] = col[j + 2] = 0; }
+    }
+    geo.attributes.position.needsUpdate = true; geo.attributes.color.needsUpdate = true;
   }
-  Object.assign(screenEl.style, { left: x0 + 'px', top: y0 + 'px', width: (x1 - x0) + 'px', height: (y1 - y0) + 'px' });
-}
-function resize() {
-  const w = stageEl.clientWidth, h = stageEl.clientHeight; if (!w || !h) return;
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(w, h);
-  const aspect = w / h;
-  camera.aspect = aspect;
-  camera.fov = aspect >= 1.75 ? 48 : 2 * Math.atan(0.794 / aspect) * 180 / Math.PI;
-  camera.updateProjectionMatrix(); layoutScreen();
-}
-new ResizeObserver(resize).observe(stageEl); addEventListener('resize', resize); resize();
+  return { burst, tick };
+})();
  
-let last = performance.now();
-(function loop(now) {
-  const dt = Math.min(0.05, (now - last) / 1000); last = now;
-  update(dt); renderer.render(scene, camera); requestAnimationFrame(loop);
-})(last);
+/* =====================================================================
+   8. Chat:聊天室(送出後同步顯示在頭頂)
+   ===================================================================== */
+const Chat = (() => {
+  const log = $('#chat-log'), input = $('#chat-input');
+  function add(name, text, sys) {
+    const d = document.createElement('div');
+    if (sys) { d.className = 'sys'; d.textContent = text; }
+    else { const b = document.createElement('b'); b.textContent = name; d.append(b, document.createTextNode(text)); }
+    log.appendChild(d);
+    while (log.children.length > 80) log.removeChild(log.firstChild);
+    log.scrollTop = log.scrollHeight;
+  }
+  function send() {
+    const text = input.value.trim(); if (!text) return;
+    if (!me) { UI.toast('請先進入影廳'); return; }
+    input.value = '';
+    add(me.name, text); Actors.bubble(me, text, 'chat');
+    Bus.emit('chat', { name: me.name, text });
+  }
+  $('#chat-send').addEventListener('click', send);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) send(); });
+  return { add };
+})();
+ 
+/* =====================================================================
+   9. Player:輸入、點擊移動、坐下 / 起立、應援
+   ===================================================================== */
+const Player = (() => {
+  const keys = {}, KEYS = { ArrowUp: 'up', w: 'up', W: 'up', ArrowDown: 'down', s: 'down', S: 'down',
+                            ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right' };
+  const v = new THREE.Vector3(), ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+ 
+  addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || !me) return;
+    if (KEYS[e.key]) { keys[KEYS[e.key]] = true; e.preventDefault(); }
+    if (e.key === 'e' || e.key === 'E') toggleSit();
+  });
+  addEventListener('keyup', e => { if (KEYS[e.key]) keys[KEYS[e.key]] = false; });
+ 
+  // 鍵盤移動以「鏡頭方向」為準,環繞到哪邊都順手
+  function keyDir() {
+    const mx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), mz = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
+    if (!mx && !mz) return null;
+    Engine.camera.getWorldDirection(v);
+    const l = Math.hypot(v.x, v.z) || 1, fx = v.x / l, fz = v.z / l;
+    const dx = -fz * mx - fx * mz, dz = fx * mx - fz * mz, n = Math.hypot(dx, dz) || 1;
+    return { x: dx / n, z: dz / n };
+  }
+  function goToSeat(s) {
+    if (!me || me.seat === s) return;
+    if (Seats.taken(s, me)) { UI.toast('這個座位已經有人了'); return; }
+    if (me.seat) Seats.stand(me);
+    me.target = Seats.front(s); me.pending = s;
+  }
+  function toggleSit() {
+    if (!me) return;
+    if (me.seat) { Seats.stand(me); return; }
+    let best = null, bd = 1e9;
+    for (const s of Venue.seats) {
+      if (Seats.taken(s, me)) continue;
+      const f = Seats.front(s), d = Math.hypot(f.x - me.x, f.z - me.z);
+      if (d < bd) { bd = d; best = s; }
+    }
+    if (best && bd < 4.5) goToSeat(best); else UI.toast('附近沒有空位,先走到座位區或直接點座位');
+  }
+  function cheer(msg, fx) {
+    if (!me) { UI.toast('請先進入影廳'); return; }
+    Actors.bubble(me, msg, 'cheer');
+    FX.burst({ x: me.g.position.x, y: me.g.position.y + 1.4, z: me.g.position.z }, fx);
+    Bus.emit('cheer', { name: me.name, msg });
+  }
+ 
+  // 點擊(位移小於 6px 才算點擊,避免和旋轉衝突)
+  let down = null;
+  Engine.viewport.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY }; });
+  Engine.viewport.addEventListener('pointerup', e => {
+    if (!down || !me) return;
+    if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return;
+    const r = Engine.viewport.getBoundingClientRect();
+    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, Engine.camera);
+    const hit = ray.intersectObjects([...Venue.seatMeshes, ...Venue.walkables])[0];
+    if (!hit) return;
+    if (hit.object.userData.seat) { goToSeat(hit.object.userData.seat); return; }
+    if (me.seat) Seats.stand(me);
+    me.pending = null;
+    me.target = limit(hit.point.x, hit.point.z);
+  });
+ 
+  $('#sit-btn').addEventListener('click', toggleSit);
+  document.querySelectorAll('.cheer-btn[data-msg]').forEach(b =>
+    b.addEventListener('click', () => cheer(b.dataset.msg, b.dataset.fx)));
+ 
+  function tick(dt) {
+    const dir = keyDir();
+    if (me) {
+      if (dir) { if (me.seat) Seats.stand(me); me.target = null; me.pending = null; }
+      Actors.step(me, dt, dir);
+      const label = me.seat ? '🧍 起立' : '🪑 坐下';
+      if ($('#sit-btn').textContent !== label) $('#sit-btn').textContent = label;
+    }
+    Actors.list.forEach(o => { if (o !== me) Actors.step(o, dt, null); });
+  }
+  return { tick };
+})();
+ 
+/* =====================================================================
+   11. UI:角色面板(暱稱 + 性別)、提示、座位統計
+   ===================================================================== */
+const UI = (() => {
+  let gender = 'm', toastT;
+  const panel = $('#profile'), nameInput = $('#name-input');
+  function toast(msg) {
+    const t = $('#toast'); t.textContent = msg; t.style.opacity = 1;
+    clearTimeout(toastT); toastT = setTimeout(() => t.style.opacity = 0, 2400);
+  }
+  function setGender(g) {
+    gender = g;
+    panel.querySelectorAll('.seg button').forEach(b => b.classList.toggle('on', b.dataset.g === g));
+  }
+  function enter() {
+    const name = nameInput.value.trim().slice(0, 12) || ('Fan' + (100 + Math.floor(Math.random() * 900)));
+    if (!me) {
+      me = Actors.make(name, gender, (Math.random() - 0.5) * 10, 7 + Math.random() * 2);
+      Chat.add('', `${name} 進入了影廳`, true);
+      toast('點座位入座、點地面行走,拖曳畫面可 360° 環繞');
+    } else {
+      me.name = name; me.gender = gender; Actors.skin(me);   // 更新暱稱 / 性別,位置與狀態保留
+      toast('角色已更新');
+    }
+    $('#enter-btn').textContent = '更新角色';
+    panel.classList.add('hidden');
+  }
+  panel.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => setGender(b.dataset.g)));
+  $('#enter-btn').addEventListener('click', enter);
+  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) enter(); });
+  $('#btn-profile').addEventListener('click', () => {
+    if (me) { nameInput.value = me.name; setGender(me.gender); }
+    panel.classList.toggle('hidden');
+  });
+  $('#btn-rotate').addEventListener('click', () => {
+    Engine.controls.autoRotate = !Engine.controls.autoRotate;
+    $('#btn-rotate').classList.toggle('active', Engine.controls.autoRotate);
+  });
+  const info = () => $('#info').textContent = `🪑 座位 ${Seats.count()} / ${Venue.seats.length} 已佔用`;
+  Bus.on('seats', info);
+  return { toast, info };
+})();
+ 
+/* =====================================================================
+   12. Boot
+   ===================================================================== */
+Venue.build();
+UI.info();
+Engine.onTick(Venue.tick);
+Engine.onTick(FX.tick);
+Engine.onTick(Player.tick);
+Engine.start();
 </script>
 </body>
 </html>
