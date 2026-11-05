@@ -1,267 +1,438 @@
 ﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LOL Watch Party for T1 Fan</title>
-  <style>
-    body {
-      background-color: #091428;
-      color: #f0e6d2;
-      font-family: "Microsoft JhengHei", Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin: 0;
-      padding: 20px;
-    }
-
-    h1 {
-      color: #c8aa6e;
-      text-shadow: 0 0 10px rgba(200, 170, 110, 0.5);
-      margin-bottom: 15px;
-    }
-
-    /* 平台切換與工具列 */
-    .control-bar {
-      margin-bottom: 15px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .platform-btn {
-      padding: 8px 14px;
-      background: #1e2328;
-      border: 1px solid #c8aa6e;
-      color: #f0e6d2;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    .platform-btn.active {
-      background: #c8aa6e;
-      color: #091428;
-    }
-
-    .url-input {
-      padding: 8px 12px;
-      width: 280px;
-      border-radius: 4px;
-      border: 1px solid #c8aa6e;
-      background-color: #1e2328;
-      color: #f0e6d2;
-      outline: none;
-      font-size: 14px;
-    }
-
-    .change-btn {
-      padding: 8px 16px;
-      background: #c8aa6e;
-      color: #091428;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    .change-btn:hover {
-      background: #f0e6d2;
-    }
-
-    /* 賽場主大螢幕框 */
-    .screen-container {
-      position: relative;
-      width: 80%;
-      max-width: 800px;
-      aspect-ratio: 16 / 9;
-      border: 4px solid #c8aa6e;
-      box-shadow: 0 0 20px rgba(0, 204, 255, 0.4);
-      border-radius: 8px;
-      overflow: hidden;
-      background-color: #000;
-    }
-
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    /* 應援按鈕區 */
-    .cheer-zone {
-      margin-top: 25px;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-      max-width: 800px;
-    }
-
-    .cheer-btn {
-      background: linear-gradient(185deg, #1e2328 0%, #111315 100%);
-      border: 2px solid #c8aa6e;
-      color: #f0e6d2;
-      padding: 10px 18px;
-      font-size: 15px;
-      font-weight: bold;
-      border-radius: 5px;
-      cursor: pointer;
-      transition: all 0.1s ease;
-    }
-
-    .cheer-btn:hover {
-      background: #c8aa6e;
-      color: #091428;
-      box-shadow: 0 0 15px rgba(200, 170, 110, 0.8);
-    }
-
-    .cheer-btn:active {
-      transform: scale(0.95);
-    }
-
-    /* 浮動應援文字動畫 */
-    .floating-text {
-      position: fixed;
-      font-size: 26px;
-      font-weight: bold;
-      color: #00ffcc;
-      text-shadow: 0 0 10px #00ffcc, 0 0 20px #00ffcc;
-      pointer-events: none;
-      animation: floatUp 1s ease-out forwards;
-      z-index: 999;
-    }
-
-    @keyframes floatUp {
-      0% { opacity: 1; transform: translateY(0) scale(0.8); }
-      50% { transform: translateY(-40px) scale(1.2); }
-      100% { opacity: 0; transform: translateY(-80px) scale(1); }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LOL Watch Party for T1 Fan</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: #091428; color: #f0e6d2;
+    font-family: "Microsoft JhengHei", Arial, sans-serif;
+    display: flex; flex-direction: column; height: 100dvh; overflow: hidden;
+  }
+  .topbar {
+    display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center;
+    padding: 8px 12px; background: #0a1220; border-bottom: 1px solid #c8aa6e;
+  }
+  h1 { font-size: 17px; margin: 0 8px 0 0; color: #c8aa6e; text-shadow: 0 0 10px rgba(200,170,110,.5); }
+  .platform-btn, .change-btn, .cheer-btn, #intro button {
+    font-family: inherit; cursor: pointer; font-weight: bold; border-radius: 4px;
+  }
+  .platform-btn { padding: 6px 12px; background: #1e2328; border: 1px solid #c8aa6e; color: #f0e6d2; }
+  .platform-btn.active { background: #c8aa6e; color: #091428; }
+  .url-input {
+    padding: 6px 10px; width: 250px; max-width: 100%; border-radius: 4px; border: 1px solid #c8aa6e;
+    background: #1e2328; color: #f0e6d2; outline: none; font-size: 14px;
+  }
+  .change-btn { padding: 6px 14px; background: #c8aa6e; color: #091428; border: none; }
+  .change-btn:hover { background: #f0e6d2; }
+ 
+  #stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+  #stage canvas { display: block; width: 100%; height: 100%; }
+ 
+  /* 影片:位置由 JS 依 3D 大螢幕投影計算 */
+  #screen {
+    position: absolute; z-index: 2; background: #000;
+    border: 3px solid #c8aa6e; box-shadow: 0 0 24px rgba(0,204,255,.45);
+    border-radius: 4px; overflow: hidden;
+  }
+  #screen iframe { width: 100%; height: 100%; border: none; }
+  .hidden { display: none; }
+ 
+  #hint {
+    position: absolute; z-index: 3; left: 10px; bottom: 8px; font-size: 12px; opacity: .75;
+    background: rgba(9,20,40,.7); padding: 4px 8px; border-radius: 4px; pointer-events: none;
+  }
+  #toast {
+    position: absolute; z-index: 4; left: 50%; bottom: 40px; transform: translateX(-50%);
+    background: rgba(9,20,40,.92); border: 1px solid #c8aa6e; padding: 6px 14px; border-radius: 6px;
+    font-size: 14px; opacity: 0; transition: opacity .25s; pointer-events: none; white-space: nowrap;
+  }
+ 
+  /* 最下面一排:應援按鈕 */
+  .cheer-zone {
+    display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+    padding: 8px; background: #0a1220; border-top: 1px solid #c8aa6e;
+  }
+  .cheer-btn {
+    background: linear-gradient(185deg, #1e2328 0%, #111315 100%);
+    border: 2px solid #c8aa6e; color: #f0e6d2; padding: 8px 14px; font-size: 14px;
+    transition: all .1s ease;
+  }
+  .cheer-btn:hover { background: #c8aa6e; color: #091428; box-shadow: 0 0 15px rgba(200,170,110,.8); }
+  .cheer-btn:active { transform: scale(.95); }
+  .cheer-btn.sit { border-color: #00ccff; }
+ 
+  #intro {
+    position: fixed; inset: 0; z-index: 20; background: rgba(5,11,24,.92);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #intro .card {
+    background: #1e2328; border: 2px solid #c8aa6e; border-radius: 8px; padding: 26px 30px;
+    text-align: center; box-shadow: 0 0 30px rgba(200,170,110,.3); max-width: 90vw;
+  }
+  #intro h2 { margin: 0 0 8px; color: #c8aa6e; }
+  #intro p { margin: 0 0 14px; font-size: 14px; }
+  #intro input {
+    padding: 9px 12px; width: 220px; max-width: 100%; border-radius: 4px; border: 1px solid #c8aa6e;
+    background: #091428; color: #f0e6d2; font-size: 16px; outline: none; text-align: center;
+  }
+  #intro button { display: block; margin: 14px auto 0; padding: 9px 26px; background: #c8aa6e; color: #091428; border: none; font-size: 15px; }
+</style>
 </head>
 <body>
-
+ 
+<div class="topbar">
   <h1>LCK / 2026 LOL WORLD 觀賽party</h1>
-
-  <!-- 換影片與平台切換工具列 -->
-  <div class="control-bar">
-    <button id="btn-yt" class="platform-btn active" onclick="switchPlatform('yt')">YouTube</button>
-    <button id="btn-twitch" class="platform-btn" onclick="switchPlatform('twitch')">Twitch 直播</button>
-    
-    <input type="text" id="video-input" class="url-input" placeholder="貼上 YouTube 網址 或 Twitch 頻道名稱">
-    <button class="change-btn" onclick="changeStream()">載入頻道/影片</button>
+  <button id="btn-yt" class="platform-btn active" onclick="switchPlatform('yt')">YouTube</button>
+  <button id="btn-twitch" class="platform-btn" onclick="switchPlatform('twitch')">Twitch 直播</button>
+  <input type="text" id="video-input" class="url-input" placeholder="貼上 YouTube 網址 或 Twitch 頻道名稱">
+  <button class="change-btn" onclick="changeStream()">載入頻道/影片</button>
+</div>
+ 
+<div id="stage">
+  <div id="screen">
+    <iframe id="yt-player"
+      src="https://www.youtube.com/embed/qKwWfrVJBpk" title="YouTube video player"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+    <iframe id="twitch-player" class="hidden"
+      src="https://player.twitch.tv/?channel=lck&parent=peifen-prog.github.io&parent=localhost&parent=127.0.0.1"
+      allowfullscreen></iframe>
   </div>
-
-  <!-- 賽場中央大螢幕 -->
-  <div class="screen-container">
-    <!-- YouTube 播放器 -->
-    <iframe 
-      id="yt-player"
-      src="https://www.youtube.com/embed/qKwWfrVJBpk" 
-      title="YouTube video player" 
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-      referrerpolicy="strict-origin-when-cross-origin" 
-      allowfullscreen>
-    </iframe>
-
-
-   <!-- Twitch 播放器 (同時支援本地與 GitHub Pages 網域) -->
-    <iframe 
-      id="twitch-player"
-      class="hidden"
-      src="https://player.twitch.tv/?channel=lck&parent=peifen-prog.github.io&parent=localhost&parent=127.0.0.1" 
-      allowfullscreen>
-    </iframe>
+  <div id="hint">點地面行走 · 點座位入座 · WASD / 方向鍵移動 · E 坐下/起立</div>
+  <div id="toast"></div>
+</div>
+ 
+<div class="cheer-zone">
+  <button class="cheer-btn sit" id="sit-btn" onclick="toggleSit()">🪑 坐下</button>
+  <button class="cheer-btn" onclick="cheer('加油！🔥')">應援 🔥</button>
+  <button class="cheer-btn" onclick="cheer('Penta Kill! ⚡')">五殺 ⚡</button>
+  <button class="cheer-btn" onclick="cheer('Solo kill ⚔️')">單殺 ⚔️</button>
+  <button class="cheer-btn" onclick="cheer('大皇蘭!')">TOP 🛡️</button>
+  <button class="cheer-btn" onclick="cheer('ONER!')">JUG 🌲</button>
+  <button class="cheer-btn" onclick="cheer('大相赫!')">MID 👑</button>
+  <button class="cheer-btn" onclick="cheer('少爺血C!')">ADC 🏹</button>
+  <button class="cheer-btn" onclick="cheer('世一輔!')">SUP 👁️</button>
+</div>
+ 
+<div id="intro">
+  <div class="card">
+    <h2>歡迎來到觀賽 Party</h2>
+    <p>幫你的小人取個名字吧(中英皆可)</p>
+    <input id="name-input" maxlength="12" placeholder="例如:Faker 的粉絲" autofocus>
+    <button onclick="startGame()">進入場館</button>
   </div>
-
-  <!-- 現場應援控制列 -->
-  <div class="cheer-zone">
-    <button class="cheer-btn" onclick="cheer('加油！🔥')">應援 🔥</button>
-    <button class="cheer-btn" onclick="cheer('Penta Kill! ⚡')">五殺 ⚡</button>
-    <button class="cheer-btn" onclick="cheer('Solo kill ⚔️')">單殺 ⚔️</button>
-    <button class="cheer-btn" onclick="cheer('大皇蘭!')">TOP 🛡️</button>
-    <button class="cheer-btn" onclick="cheer('ONER!')">JUG 🌲</button>
-    <button class="cheer-btn" onclick="cheer('大相赫!')">MID 👑</button>
-    <button class="cheer-btn" onclick="cheer('少爺血C!')">ADC 🏹</button>
-    <button class="cheer-btn" onclick="cheer('世一輔!')">SUP 👁️</button>
-  </div>
-
-  <script>
-  let currentPlatform = 'yt';
-
-  function switchPlatform(platform) {
-    currentPlatform = platform;
-    const ytPlayer = document.getElementById('yt-player');
-    const twitchPlayer = document.getElementById('twitch-player');
-    const btnYt = document.getElementById('btn-yt');
-    const btnTwitch = document.getElementById('btn-twitch');
-
-    if (platform === 'yt') {
-      ytPlayer.classList.remove('hidden');
-      twitchPlayer.classList.add('hidden');
-      btnYt.classList.add('active');
-      btnTwitch.classList.remove('active');
+</div>
+ 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ========== 影片切換(沿用原本邏輯) ========== */
+let currentPlatform = 'yt';
+function switchPlatform(p) {
+  currentPlatform = p;
+  document.getElementById('yt-player').classList.toggle('hidden', p !== 'yt');
+  document.getElementById('twitch-player').classList.toggle('hidden', p === 'yt');
+  document.getElementById('btn-yt').classList.toggle('active', p === 'yt');
+  document.getElementById('btn-twitch').classList.toggle('active', p !== 'yt');
+}
+function changeStream() {
+  const input = document.getElementById('video-input').value.trim();
+  if (!input) return;
+  if (currentPlatform === 'yt') {
+    let id = input;
+    if (input.includes('v=')) id = input.split('v=')[1].split('&')[0];
+    else if (input.includes('youtu.be/')) id = input.split('youtu.be/')[1].split('?')[0];
+    else if (input.includes('embed/')) id = input.split('embed/')[1].split('?')[0];
+    document.getElementById('yt-player').src = `https://www.youtube.com/embed/${id}`;
+  } else {
+    if (/[\u4e00-\u9fa5]/.test(input)) {
+      window.open(`https://www.twitch.tv/search?term=${encodeURIComponent(input)}`, '_blank');
     } else {
-      ytPlayer.classList.add('hidden');
-      twitchPlayer.classList.remove('hidden');
-      btnTwitch.classList.add('active');
-      btnYt.classList.remove('active');
+      let ch = input.replace('https://www.twitch.tv/', '').trim();
+      if (ch.includes('?')) ch = ch.split('?')[0];
+      document.getElementById('twitch-player').src =
+        `https://player.twitch.tv/?channel=${ch}&parent=peifen-prog.github.io&parent=localhost&parent=127.0.0.1`;
     }
   }
-
-  function changeStream() {
-    const input = document.getElementById('video-input').value.trim();
-    if (!input) return;
-
-    if (currentPlatform === 'yt') {
-      let videoId = input;
-      if (input.includes('v=')) {
-        videoId = input.split('v=')[1].split('&')[0];
-      } else if (input.includes('youtu.be/')) {
-        videoId = input.split('youtu.be/')[1].split('?')[0];
-      } else if (input.includes('embed/')) {
-        videoId = input.split('embed/')[1].split('?')[0];
-      }
-      document.getElementById('yt-player').src = `https://www.youtube.com/embed/${videoId}`;
-    } else {
-        // 檢查是否包含中文（非 ASCII 字元）
-        const hasChinese = /[\u4e00-\u9fa5]/.test(input);
-
-        if (hasChinese) {
-          // 若包含中文，開啟 Twitch 搜尋頁面新視窗
-          window.open(`https://www.twitch.tv/search?term=${encodeURIComponent(input)}`, '_blank');
-        } else {
-          // 若為英文 ID 或網址，直接切換內嵌頻道 (包含 GitHub Pages 網域授權)
-          let channel = input.replace('https://www.twitch.tv/', '').trim();
-          if (channel.includes('?')) {
-            channel = channel.split('?')[0];
-          }
-          document.getElementById('twitch-player').src = `https://player.twitch.tv/?channel=${channel}&parent=peifen-prog.github.io&parent=localhost&parent=127.0.0.1`;
-        }
-      }
+}
+ 
+/* ========== 3D 場景 ========== */
+const stageEl = document.getElementById('stage');
+const screenEl = document.getElementById('screen');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+stageEl.insertBefore(renderer.domElement, stageEl.firstChild);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050b18);
+scene.fog = new THREE.Fog(0x050b18, 55, 120);
+const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 200);
+camera.position.set(0, 13, 26);
+camera.lookAt(0, 7, -6);
+ 
+scene.add(new THREE.AmbientLight(0x8fa8d0, 0.75));
+const sun = new THREE.DirectionalLight(0xffffff, 0.6); sun.position.set(6, 20, 15); scene.add(sun);
+const glow = new THREE.PointLight(0x33ccff, 1.1, 70); glow.position.set(0, 10, -10); scene.add(glow);
+ 
+function box(w, h, d, color, x, y, z, parent = scene, emissive = 0x000000) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d),
+    new THREE.MeshLambertMaterial({ color, emissive }));
+  m.position.set(x, y, z); parent.add(m); return m;
+}
+ 
+// 場館尺寸
+const SW = 32, SH = 18, SY = 10.5, SZ = -15;     // 大螢幕(影片位置)
+const BX = 12, ZMIN = -11, ZMAX = 10.5;          // 可走範圍
+const ROW_Z0 = 3, ROW_D = 2.2, ROWS = 4, COLS = 10;
+const rowH = i => (i + 1) * 0.4;
+ 
+const walkables = [];
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshLambertMaterial({ color: 0x0b1626 }));
+floor.rotation.x = -Math.PI / 2; scene.add(floor); walkables.push(floor);
+const grid = new THREE.GridHelper(60, 60, 0x1e3a5f, 0x10233b); grid.position.y = 0.02; scene.add(grid);
+ 
+// 舞台與螢幕本體
+box(SW + 3, 1.2, 5, 0x141c2b, 0, 0.6, SZ + 1.5, scene, 0x05080f);
+box(SW + 1.6, SH + 1.6, 0.6, 0x10151f, 0, SY, SZ - 0.5, scene, 0x0a1a2e);
+box(SW + 3, 0.15, 0.3, 0xc8aa6e, 0, 1.25, SZ + 4, scene, 0x6b5320);
+ 
+// 階梯座席平台
+for (let i = 0; i < ROWS; i++) {
+  const z = ROW_Z0 + i * ROW_D, h = rowH(i);
+  const p = box(26, h, ROW_D, 0x172234, 0, h / 2, z);
+  walkables.push(p);
+  box(26, 0.06, 0.1, 0xc8aa6e, 0, h + 0.02, z - ROW_D / 2, scene, 0x6b5320);
+}
+function groundY(z) {
+  const i = Math.floor((z - (ROW_Z0 - ROW_D / 2)) / ROW_D);
+  if (i < 0) return 0;
+  return rowH(Math.min(i, ROWS - 1));
+}
+ 
+// 40 個座位(4 排 × 10 位,中間走道)
+const seats = [], seatMeshes = [];
+for (let r = 0; r < ROWS; r++) {
+  for (let c = 0; c < COLS; c++) {
+    const x = (c - 4.5) * 2.2 + (c < 5 ? -1.2 : 1.2);
+    const z = ROW_Z0 + r * ROW_D, y = rowH(r);
+    const g = new THREE.Group(); g.position.set(x, y, z); scene.add(g);
+    const s = { x, z, y, row: r, col: c };
+    const pad = box(1.2, 0.2, 1.0, 0xb3162d, 0, 0.4, 0, g);
+    const back = box(1.2, 1.0, 0.18, 0x2a2f3a, 0, 0.95, 0.52, g);
+    const leg = box(0.2, 0.3, 0.2, 0x444b57, 0, 0.15, 0, g);
+    [pad, back, leg].forEach(m => { m.userData.seat = s; seatMeshes.push(m); });
+    seats.push(s);
   }
-
-  function cheer(message) {
-    const text = document.createElement('div');
-    text.className = 'floating-text';
-    text.innerText = message;
-    
-    const x = Math.random() * (window.innerWidth - 150);
-    const y = window.innerHeight - 180;
-    text.style.left = `${x}px`;
-    text.style.top = `${y}px`;
-
-    document.body.appendChild(text);
-
-    setTimeout(() => {
-      text.remove();
-    }, 1000);
+}
+ 
+/* ========== 小人 ========== */
+function rr(x, a, b, w, h, r) {
+  x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r);
+  x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath();
+}
+function textSprite(txt, o = {}) {
+  const { color = '#f0e6d2', border = '#c8aa6e', size = 36, h = 56, sc = 0.55 } = o;
+  const c = document.createElement('canvas'), x = c.getContext('2d');
+  const font = `bold ${size}px "Microsoft JhengHei", Arial, sans-serif`;
+  x.font = font; const w = Math.ceil(x.measureText(txt).width) + 40;
+  c.width = w; c.height = h; x.font = font;
+  x.fillStyle = 'rgba(9,20,40,.88)'; rr(x, 2, 2, w - 4, h - 4, 14); x.fill();
+  x.lineWidth = 3; x.strokeStyle = border; x.stroke();
+  x.fillStyle = color; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(txt, w / 2, h / 2 + 2);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false }));
+  s.scale.set(sc * w / h, sc, 1); s.renderOrder = 10; return s;
+}
+function makePerson(shirt, name) {
+  const g = new THREE.Group(), pants = 0x222831, skin = 0xf1c9a5;
+  box(0.5, 0.65, 0.3, shirt, 0, 1.175, 0, g);
+  box(0.5, 0.2, 0.3, pants, 0, 0.9, 0, g);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 12), new THREE.MeshLambertMaterial({ color: skin }));
+  head.position.y = 1.72; g.add(head);
+  box(0.46, 0.12, 0.46, 0x1b1b1b, 0, 1.9, 0.02, g);
+  box(0.05, 0.07, 0.03, 0x111111, -0.08, 1.74, -0.2, g);
+  box(0.05, 0.07, 0.03, 0x111111, 0.08, 1.74, -0.2, g);
+  const leg = x => {
+    const h = new THREE.Group(); h.position.set(x, 0.85, 0); g.add(h);
+    box(0.2, 0.4, 0.2, pants, 0, -0.2, 0, h);
+    const k = new THREE.Group(); k.position.y = -0.4; h.add(k);
+    box(0.18, 0.4, 0.18, pants, 0, -0.2, 0, k);
+    box(0.2, 0.1, 0.28, 0xffffff, 0, -0.42, -0.04, k);
+    return { h, k };
+  };
+  const arm = x => {
+    const a = new THREE.Group(); a.position.set(x, 1.45, 0); g.add(a);
+    box(0.13, 0.55, 0.13, shirt, 0, -0.27, 0, a); return a;
+  };
+  const p = { legL: leg(-0.13), legR: leg(0.13), armL: arm(-0.35), armR: arm(0.35) };
+  const label = textSprite(name); label.position.y = 2.5; g.add(label);
+  g.userData = p; return g;
+}
+ 
+let me = null;
+function startGame() {
+  const input = document.getElementById('name-input');
+  const name = input.value.trim().slice(0, 12) || ('Fan' + (100 + Math.floor(Math.random() * 900)));
+  const g = makePerson(0xe2012d, name);   // T1 紅色球衣
+  g.position.set(0, 0, -6); scene.add(g);
+  me = { g, x: 0, z: -6, yCur: 0, yaw: Math.PI, yawT: 0, target: null, pending: null,
+         seat: null, lastSeat: null, sitT: 0, phase: 0, walk: 0, bubbles: [] };
+  me.yaw = 0;
+  document.getElementById('intro').style.display = 'none';
+  toast(`${name},歡迎入場!點地面走動、點座位入座`);
+}
+document.getElementById('name-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.isComposing) startGame();
+});
+ 
+/* ========== 互動 ========== */
+const keys = {};
+const keyMap = { ArrowUp: 'up', w: 'up', W: 'up', ArrowDown: 'down', s: 'down', S: 'down',
+                 ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right' };
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || !me) return;
+  if (keyMap[e.key]) { keys[keyMap[e.key]] = true; e.preventDefault(); }
+  if (e.key === 'e' || e.key === 'E') toggleSit();
+});
+addEventListener('keyup', e => { if (keyMap[e.key]) keys[keyMap[e.key]] = false; });
+ 
+let toastT;
+function toast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.style.opacity = 1;
+  clearTimeout(toastT); toastT = setTimeout(() => t.style.opacity = 0, 2200);
+}
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const frontOf = s => ({ x: s.x, z: s.z - 0.85 });
+ 
+function goToSeat(s) {
+  if (!me || me.seat === s) return;
+  if (me.seat) standUp();
+  me.target = frontOf(s); me.pending = s;
+}
+function standUp() {
+  if (!me || !me.seat) return;
+  const f = frontOf(me.seat); me.x = f.x; me.z = f.z; me.seat = null;
+}
+function sitDown(s) {
+  me.seat = s; me.lastSeat = s; me.target = null; me.pending = null;
+  toast(`已入座:第 ${s.row + 1} 排 ${s.col + 1} 號`);
+}
+function toggleSit() {
+  if (!me) return;
+  if (me.seat) { standUp(); return; }
+  let best = null, bd = 1e9;
+  for (const s of seats) {
+    const f = frontOf(s), d = Math.hypot(f.x - me.x, f.z - me.z);
+    if (d < bd) { bd = d; best = s; }
   }
+  if (best && bd < 4.5) goToSeat(best);
+  else toast('附近沒有座位,先走到座位區吧');
+}
+ 
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+renderer.domElement.addEventListener('click', e => {
+  if (!me) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObjects([...seatMeshes, ...walkables])[0];
+  if (!hit) return;
+  if (hit.object.userData.seat) { goToSeat(hit.object.userData.seat); return; }
+  if (me.seat) standUp();
+  me.pending = null;
+  me.target = { x: clamp(hit.point.x, -BX, BX), z: clamp(hit.point.z, ZMIN, ZMAX) };
+});
+ 
+// 頭上浮動文字
+function cheer(msg) {
+  if (!me) return;
+  const s = textSprite(msg, { color: '#00ffcc', border: '#00ffcc', size: 44, h: 72, sc: 0.75 });
+  me.g.add(s); me.bubbles.unshift({ s, t: 0 });
+  if (me.bubbles.length > 4) { const old = me.bubbles.pop(); me.g.remove(old.s); }
+}
+ 
+/* ========== 主迴圈 ========== */
+const wrapPI = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
+const sitBtn = document.getElementById('sit-btn');
+ 
+function update(dt) {
+  if (!me) return;
+  const mvx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), mvz = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
+  const want = mvx || mvz;
+  if (want) { if (me.seat) standUp(); me.target = null; me.pending = null; }
+ 
+  me.sitT = clamp(me.sitT + (me.seat ? 1 : -1) * dt * 3, 0, 1);
+  let moving = false;
+  if (!me.seat && me.sitT < 0.02) {
+    let dx = 0, dz = 0, step = 5 * dt;
+    if (want) { const l = Math.hypot(mvx, mvz); dx = mvx / l; dz = mvz / l; }
+    else if (me.target) {
+      const ex = me.target.x - me.x, ez = me.target.z - me.z, d = Math.hypot(ex, ez);
+      if (d < 0.1) { me.target = null; if (me.pending) sitDown(me.pending); }
+      else { dx = ex / d; dz = ez / d; step = Math.min(step, d); }
+    }
+    if (dx || dz) {
+      me.x = clamp(me.x + dx * step, -BX, BX); me.z = clamp(me.z + dz * step, ZMIN, ZMAX);
+      me.yawT = Math.atan2(-dx, -dz); moving = true;
+    }
+  }
+  const sitting = me.seat || me.sitT > 0;
+  me.yaw += wrapPI((sitting ? 0 : me.yawT) - me.yaw) * Math.min(1, dt * 10);
+  me.yCur += (groundY(me.z) - me.yCur) * Math.min(1, dt * 14);
+ 
+  const e = me.sitT * me.sitT * (3 - 2 * me.sitT);
+  let px = me.x, pz = me.z, py = me.yCur;
+  if (me.lastSeat && e > 0) {
+    const s = me.lastSeat;
+    px += (s.x - me.x) * e; pz += (s.z + 0.1 - me.z) * e; py += (s.y - 0.32 - me.yCur) * e;
+  }
+  me.walk += ((moving ? 1 : 0) - me.walk) * Math.min(1, dt * 10);
+  if (moving) me.phase += dt * 10;
+  const sw = Math.sin(me.phase) * 0.8 * me.walk * (1 - e);
+  py += Math.abs(Math.sin(me.phase)) * 0.05 * me.walk;
+  me.g.position.set(px, py, pz); me.g.rotation.y = me.yaw;
+  const p = me.g.userData, H = Math.PI / 2;
+  p.legL.h.rotation.x = sw + e * H; p.legR.h.rotation.x = -sw + e * H;
+  p.legL.k.rotation.x = p.legR.k.rotation.x = -e * H;
+  p.armL.rotation.x = -sw - e * 0.4; p.armR.rotation.x = sw - e * 0.4;
+ 
+  for (let i = me.bubbles.length - 1; i >= 0; i--) {
+    const b = me.bubbles[i]; b.t += dt;
+    b.s.position.y = 3.2 + i * 0.8 + b.t * 0.12;
+    b.s.material.opacity = b.t > 2.6 ? Math.max(0, 1 - (b.t - 2.6) / 0.6) : 1;
+    if (b.t > 3.2) { me.g.remove(b.s); b.s.material.map.dispose(); b.s.material.dispose(); me.bubbles.splice(i, 1); }
+  }
+  const label = me.seat ? '🧍 起立' : '🪑 坐下';
+  if (sitBtn.textContent !== label) sitBtn.textContent = label;
+}
+ 
+// 把 3D 大螢幕的位置投影到畫面上,讓 YouTube / Twitch 貼合在場館最前方
+function layoutScreen() {
+  camera.updateMatrixWorld();
+  const w = stageEl.clientWidth, h = stageEl.clientHeight;
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    const v = new THREE.Vector3(sx * SW / 2, SY + sy * SH / 2, SZ).project(camera);
+    const px = (v.x + 1) / 2 * w, py = (1 - v.y) / 2 * h;
+    x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py);
+  }
+  Object.assign(screenEl.style, { left: x0 + 'px', top: y0 + 'px', width: (x1 - x0) + 'px', height: (y1 - y0) + 'px' });
+}
+function resize() {
+  const w = stageEl.clientWidth, h = stageEl.clientHeight; if (!w || !h) return;
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(w, h);
+  const aspect = w / h;
+  camera.aspect = aspect;
+  camera.fov = aspect >= 1.75 ? 48 : 2 * Math.atan(0.794 / aspect) * 180 / Math.PI;
+  camera.updateProjectionMatrix(); layoutScreen();
+}
+new ResizeObserver(resize).observe(stageEl); addEventListener('resize', resize); resize();
+ 
+let last = performance.now();
+(function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  update(dt); renderer.render(scene, camera); requestAnimationFrame(loop);
+})(last);
 </script>
 </body>
 </html>
