@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LOL Watch Party for T1 Fan</title>
+<title>LOL Watch Party for T1 Fan (Multiplayer)</title>
 <style>
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
@@ -28,7 +28,6 @@
               background: radial-gradient(ellipse at 50% 25%, #0e2144 0%, #050b18 70%); }
   #viewport.dragging iframe { pointer-events: none; }
  
-  /* 內嵌網站(1280x720,由 CSS3DRenderer 貼到 3D 大螢幕上,內容未更動) */
   #screen-embed { width: 1280px; height: 720px; background: #000; }
   #screen-embed iframe { width: 100%; height: 100%; border: none; }
  
@@ -80,7 +79,6 @@
  
 <div id="stage">
   <div id="viewport">
-    <!-- 內嵌播放器:維持原本的 YouTube / Twitch iframe 設定 -->
     <div id="screen-embed">
       <iframe
         id="yt-player"
@@ -135,6 +133,8 @@
   <button class="cheer-btn" data-msg="世一輔!" data-fx="gold">SUP 👁️</button>
 </div>
  
+<!-- 引入 Socket.io 客户端 -->
+<script src="/socket.io/socket.io.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS3DRenderer.js"></script>
@@ -142,7 +142,7 @@
 'use strict';
  
 /* =====================================================================
-   0. 影片切換(沿用原本邏輯,未更動)
+   0. 影片切換
    ===================================================================== */
 let currentPlatform = 'yt';
  
@@ -198,16 +198,16 @@ function changeStream() {
    1. 設定與共用工具
    ===================================================================== */
 const CFG = {
-  SW: 24, SH: 13.5, SY: 9.25,                 // 大螢幕(16:9)尺寸與中心高度,位於 (0, 0)
-  ROWS: 4, COLS: 10,                          // 4 排 x 10 列 = 40 座位
-  R0: 16, ROW_D: 2.2,                         // 第一排弧形半徑、排距
-  STEP: 0.15, AISLE: 0.07,                    // 每個座位的間隔角度(弧度)、中間走道加寬角度
-  ZMIN: 5, RMAX: 26,                          // 可走範圍
+  SW: 24, SH: 13.5, SY: 9.25,
+  ROWS: 4, COLS: 10,
+  R0: 16, ROW_D: 2.2,
+  STEP: 0.15, AISLE: 0.07,
+  ZMIN: 5, RMAX: 26,
   SPEED: 5
 };
 const $ = s => document.querySelector(s);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const limit = (x, z) => {                      // 把位置限制在可走範圍內
+const limit = (x, z) => {
   x = clamp(x, -24, 24); z = Math.max(z, CFG.ZMIN);
   const r = Math.hypot(x, z);
   if (r > CFG.RMAX) { x *= CFG.RMAX / r; z = Math.max(CFG.ZMIN, z * CFG.RMAX / r); }
@@ -215,7 +215,6 @@ const limit = (x, z) => {                      // 把位置限制在可走範圍
 };
 const wrapPI = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
  
-// 簡易事件匯流排:之後要接 Firebase / WebSocket 多人同步,只要監聽這些事件
 const Bus = {
   h: {},
   on(e, f) { (this.h[e] = this.h[e] || []).push(f); },
@@ -244,7 +243,7 @@ function textSprite(txt, o = {}) {
 }
  
 /* =====================================================================
-   2. Engine:WebGL + CSS3D 雙渲染器、OrbitControls、主迴圈
+   2. Engine: 雙渲染器、OrbitControls、主迴圈
    ===================================================================== */
 const Engine = (() => {
   const viewport = $('#viewport'), stage = $('#stage');
@@ -253,7 +252,6 @@ const Engine = (() => {
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 300);
   camera.position.set(0, 14, 38);
  
-  // WebGL 在上層(透明背景),CSS3D(iframe)在下層,透過「透明洞」讓影片從螢幕位置透出來
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setClearColor(0x000000, 0);
   const cssR = new THREE.CSS3DRenderer();
@@ -268,7 +266,6 @@ const Engine = (() => {
   controls.autoRotateSpeed = 1.2;
   controls.update();
  
-  // 拖曳時暫時讓 iframe 不吃事件,避免滑鼠移到影片上就中斷旋轉
   viewport.addEventListener('pointerdown', () => viewport.classList.add('dragging'));
   addEventListener('pointerup', () => viewport.classList.remove('dragging'));
  
@@ -294,16 +291,15 @@ const Engine = (() => {
 })();
  
 /* =====================================================================
-   3. Venue:場館、霓虹、大螢幕、座位
+   3. Venue: 場館與座位
    ===================================================================== */
 const Venue = (() => {
   const { SW, SH, SY, ROWS, COLS, R0, ROW_D, STEP, AISLE } = CFG, scene = Engine.scene;
   const walkables = [], seats = [], seatMeshes = [];
   const rowH = i => (i + 1) * 0.4;
-  const SPAN = 4.5 * STEP + AISLE + 0.12;                       // 弧形座席區的半角度
+  const SPAN = 4.5 * STEP + AISLE + 0.12;
   const seatAngle = c => (c - 4.5) * STEP + (c < 5 ? -AISLE : AISLE);
  
-  // RGB 流動霓虹:保留彩虹漸層與流動,但混入白色降低飽和(粉彩感)
   const neon = new THREE.ShaderMaterial({
     uniforms: { uTime: { value: 0 } }, side: THREE.DoubleSide,
     vertexShader: 'varying vec3 vP; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vP = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
@@ -318,18 +314,15 @@ const Venue = (() => {
       const l = new THREE.PointLight(0xffffff, 1.0, 60); l.position.set(...p); scene.add(l); return l;
     });
  
-    // 地板、格線、霓虹圓環
     const floor = new THREE.Mesh(new THREE.CircleGeometry(80, 64), new THREE.MeshLambertMaterial({ color: 0x0b1626 }));
     floor.rotation.x = -Math.PI / 2; scene.add(floor); walkables.push(floor);
     const grid = new THREE.GridHelper(160, 80, 0x1e3a5f, 0x10233b); grid.position.y = 0.02; scene.add(grid);
     const ring = new THREE.Mesh(new THREE.RingGeometry(30, 30.4, 96), neon);
     ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; scene.add(ring);
  
-    // 舞台 + 前緣霓虹
     box(SW + 4, 1.2, 6, 0x141c2b, 0, 0.6, 1.5);
     box(SW + 4, 0.14, 0.14, 0, 0, 1.25, 4.5, scene, neon);
  
-    // 大螢幕:背板(從背後看是實心)+ 透明洞 + CSS3D 內嵌播放器 + 霓虹邊框
     box(SW + 1, SH + 1, 0.6, 0x0a0f18, 0, SY, -0.4);
     const hole = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH),
       new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0, blending: THREE.NoBlending }));
@@ -340,8 +333,7 @@ const Venue = (() => {
     box(SW + 1.6, 0.4, 0.7, 0, 0, SY - SH / 2 - 0.6, 0.1, scene, neon);
     box(0.4, SH + 1.6, 0.7, 0, -(SW / 2 + 0.6), SY, 0.1, scene, neon);
     box(0.4, SH + 1.6, 0.7, 0, SW / 2 + 0.6, SY, 0.1, scene, neon);
- 
-    // 兩側光束(柔和粉彩色)
+
     [-1, 1].forEach(sd => {
       const m = new THREE.Mesh(new THREE.ConeGeometry(3.2, 24, 24, 1, true), new THREE.MeshBasicMaterial({
         color: sd < 0 ? 0xff8fa3 : 0x8fcfff, transparent: true, opacity: 0.07,
@@ -349,7 +341,6 @@ const Venue = (() => {
       m.position.set(sd * (SW / 2 + 3), 11, 5); m.rotation.x = -0.5; scene.add(m);
     });
  
-    // ===== 低調藍光:圍繞螢幕、座位區、外圍 =====
     const BLUE = 0x3d8bff;
     const glowTex = (() => {
       const c = document.createElement('canvas'); c.width = c.height = 128;
@@ -358,12 +349,12 @@ const Venue = (() => {
       x.fillStyle = g; x.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c);
     })();
     const glowMat = () => new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-    // 螢幕:背後光暈 + 兩側藍色光柱 + 舞台前方地面藍光
+    
     const halo = new THREE.Mesh(new THREE.PlaneGeometry(SW + 16, SH + 12), glowMat()); halo.position.set(0, SY, -1); scene.add(halo);
     [-1, 1].forEach(sd => box(0.25, SH + 3, 0.25, BLUE, sd * (SW / 2 + 2.4), SY, 0.1, scene, new THREE.MeshBasicMaterial({ color: BLUE })));
     const fg = new THREE.Mesh(new THREE.PlaneGeometry(44, 16), glowMat());
     fg.rotation.x = -Math.PI / 2; fg.position.set(0, 0.06, 8); scene.add(fg);
-    // 環形藍光(中心亮、向外淡出)
+    
     const ringGlow = (rIn, rOut, a0, len, dir) => {
       const m = new THREE.Mesh(new THREE.RingGeometry(rIn, rOut, 96, 1, a0, len), new THREE.ShaderMaterial({
         transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
@@ -373,7 +364,7 @@ const Venue = (() => {
       }));
       m.rotation.x = -Math.PI / 2; m.position.y = 0.05; scene.add(m);
     };
-    // 外圍:大圓環藍光 + 一圈細光柱
+    
     ringGlow(30, 37, 0, Math.PI * 2, 1);
     ringGlow(26, 30, 0, Math.PI * 2, -1);
     for (let k = 0; k < 16; k++) {
@@ -382,15 +373,14 @@ const Venue = (() => {
         color: BLUE, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
       pil.position.set(32 * Math.sin(a), 6, 32 * Math.cos(a)); scene.add(pil);
     }
-    // 座位區:弧形座席內外兩側地面藍光 + 偏藍的補光
-    const rOut = R0 + (ROWS - 1) * ROW_D + ROW_D / 2, rIn = R0 - ROW_D / 2, sa0 = -SPAN - Math.PI / 2;
-    ringGlow(rOut, rOut + 3.5, sa0, SPAN * 2, 1);
-    ringGlow(rIn - 3, rIn, sa0, SPAN * 2, -1);
+    
+    const sa0 = -SPAN - Math.PI / 2;
+    ringGlow(R0 + (ROWS - 1) * ROW_D + ROW_D / 2, R0 + (ROWS - 1) * ROW_D + ROW_D / 2 + 3.5, sa0, SPAN * 2, 1);
+    ringGlow(R0 - ROW_D / 2 - 3, R0 - ROW_D / 2, sa0, SPAN * 2, -1);
     [[0, 7, 3], [-16, 5, 12], [16, 5, 12]].forEach(q => {
       const l = new THREE.PointLight(BLUE, 0.6, 45); l.position.set(...q); scene.add(l);
     });
  
-    // 弧形階梯座席:以螢幕為圓心,一排一排往外、往上
     for (let r = 0; r < ROWS; r++) {
       const R = R0 + r * ROW_D, h = rowH(r), a0 = -SPAN - Math.PI / 2, a1 = SPAN - Math.PI / 2;
       const shape = new THREE.Shape();
@@ -408,7 +398,7 @@ const Venue = (() => {
  
       for (let c = 0; c < COLS; c++) {
         const th = seatAngle(c), sn = Math.sin(th), cs = Math.cos(th), x = R * sn, z = R * cs;
-        const g = new THREE.Group(); g.position.set(x, h, z); g.rotation.y = th; scene.add(g);   // 椅子面向圓心(螢幕)
+        const g = new THREE.Group(); g.position.set(x, h, z); g.rotation.y = th; scene.add(g);
         const seat = { x, z, y: h, row: r, col: c, id: seats.length, occ: null, yaw: th, sn, cs };
         const pad = box(1.2, 0.2, 1.0, 0xb3162d, 0, 0.4, 0, g);
         const back = box(1.2, 1.0, 0.18, 0x2a2f3a, 0, 0.95, 0.52, g);
@@ -433,30 +423,33 @@ const Venue = (() => {
 })();
  
 /* =====================================================================
-/* =====================================================================
-   4. Seats:座位佔用狀態(紅 = 空位,金 = 已佔用)
+   4. Seats: 座位狀態管理
    ===================================================================== */
 const Seats = (() => {
   const FREE = 0xb3162d, TAKEN = 0xc8aa6e;
-  const front = s => ({ x: s.x - 0.85 * s.sn, z: s.z - 0.85 * s.cs });   // 座位前方(朝圓心)
+  const front = s => ({ x: s.x - 0.85 * s.sn, z: s.z - 0.85 * s.cs });
   const paint = s => { s.mat.color.setHex(s.occ ? TAKEN : FREE); s.mat.emissive.setHex(s.occ ? 0x5a4310 : 0); };
   const taken = (s, o) => !!s.occ && s.occ !== o;
+  
   function sit(o, s) {
     if (taken(s, o)) return false;
+    if (o.seat) stand(o);
     s.occ = o; o.seat = s; o.lastSeat = s; o.target = null; o.pending = null; o.yawT = s.yaw;
     paint(s); Bus.emit('seats'); return true;
   }
+  
   function stand(o) {
     const s = o.seat; if (!s) return;
     const f = front(s); o.x = f.x; o.z = f.z; s.occ = null; o.seat = null;
     paint(s); Bus.emit('seats');
   }
+  
   const count = () => Venue.seats.filter(s => s.occ).length;
-  return { front, sit, stand, taken, count };
+  return { front, sit, stand, taken, count, paint };
 })();
  
 /* =====================================================================
-   5. Avatar:男 / 女 T1 隊服角色(黑 + 紅 + 金)
+   5. Avatar: 角色模型建構
    ===================================================================== */
 const Avatar = (() => {
   const SKIN = 0xf1c9a5, BLACK = 0x15171c, RED = 0xe2012d, GOLD = 0xc8aa6e;
@@ -474,33 +467,29 @@ const Avatar = (() => {
     const tw = f ? 0.44 : 0.58, td = f ? 0.28 : 0.32, ax = f ? 0.31 : 0.41, aw = f ? 0.11 : 0.14, lw = f ? 0.17 : 0.22;
     const hair = f ? 0x4a2a1c : 0x15120f;
  
-    // 外套:黑底 + 紅色拉鍊條 + 金色領口/下擺
     box(tw, 0.66, td, BLACK, 0, 1.18, 0, g);
     box(0.07, 0.66, td + 0.02, RED, 0, 1.18, 0, g);
     box(tw + 0.02, 0.07, td + 0.02, GOLD, 0, 1.5, 0, g);
     box(tw + 0.02, 0.06, td + 0.02, GOLD, 0, 0.88, 0, g);
     const fb = badge('T1', 0.2, 0.15); fb.position.set(-tw * 0.25, 1.32, -(td / 2 + 0.013)); fb.rotation.y = Math.PI; g.add(fb);
-    const bb = badge('T1', 0.38, 0.29); bb.position.set(0, 1.27, td / 2 + 0.013); g.add(bb);   // 背面大 T1(從後方觀看最明顯)
+    const bb = badge('T1', 0.38, 0.29); bb.position.set(0, 1.27, td / 2 + 0.013); g.add(bb);
  
-    // 下半身:男 = 長褲,女 = 短裙(輪廓差異)
     if (f) { box(tw + 0.2, 0.22, td + 0.1, BLACK, 0, 0.84, 0, g); box(tw + 0.22, 0.04, td + 0.12, RED, 0, 0.73, 0, g); }
     else box(tw, 0.2, td, BLACK, 0, 0.9, 0, g);
  
-    // 頭、五官、髮型
     const head = new THREE.Mesh(new THREE.SphereGeometry(f ? 0.21 : 0.22, 16, 12), new THREE.MeshLambertMaterial({ color: SKIN }));
     head.position.y = f ? 1.71 : 1.72; g.add(head);
     box(0.05, 0.07, 0.03, 0x111111, -0.08, 1.74, -0.2, g);
     box(0.05, 0.07, 0.03, 0x111111, 0.08, 1.74, -0.2, g);
     box(0.46, 0.13, 0.46, hair, 0, 1.9, 0.01, g);
     if (f) {
-      box(0.44, 0.08, 0.06, hair, 0, 1.84, -0.21, g);          // 瀏海
-      box(0.5, 0.62, 0.12, hair, 0, 1.5, 0.2, g);             // 長髮
-      box(0.47, 0.04, 0.47, RED, 0, 1.86, 0, g);              // 紅髮帶
+      box(0.44, 0.08, 0.06, hair, 0, 1.84, -0.21, g);
+      box(0.5, 0.62, 0.12, hair, 0, 1.5, 0.2, g);
+      box(0.47, 0.04, 0.47, RED, 0, 1.86, 0, g);
     } else {
-      box(0.46, 0.22, 0.1, hair, 0, 1.76, 0.2, g);            // 後腦短髮
+      box(0.46, 0.22, 0.1, hair, 0, 1.76, 0.2, g);
     }
  
-    // 腿(大腿 + 小腿,可彎曲)與紅色球鞋
     const leg = x => {
       const h = new THREE.Group(); h.position.set(x, 0.85, 0); g.add(h);
       box(lw, 0.4, lw, BLACK, 0, -0.2, 0, h);
@@ -509,7 +498,6 @@ const Avatar = (() => {
       box(lw, 0.1, 0.28, RED, 0, -0.42, -0.04, k);
       return { h, k };
     };
-    // 手臂:黑袖 + 紅袖口 + 手
     const arm = x => {
       const a = new THREE.Group(); a.position.set(x, 1.45, 0); g.add(a);
       box(aw, 0.42, aw, BLACK, 0, -0.21, 0, a);
@@ -524,15 +512,17 @@ const Avatar = (() => {
 })();
  
 /* =====================================================================
-   6. Actors:移動、坐下/起立動作、頭頂氣泡(玩家與 NPC 共用)
+   6. Actors: 角色邏輯 (管理本地與網路上的所有玩家)
    ===================================================================== */
 let me = null;
 const Actors = (() => {
+  const map = new Map(); // id -> actor
   const list = [];
   const STYLE = {
     chat: { color: '#ffffff', border: '#c8aa6e', size: 38, h: 60, sc: 0.62 },
     cheer: { color: '#f5d98a', border: '#c8aa6e', size: 44, h: 72, sc: 0.75 }
   };
+
   function skin(o) {
     if (o.g) Engine.scene.remove(o.g);
     o.bubbles = [];
@@ -540,17 +530,36 @@ const Actors = (() => {
     const lab = textSprite(o.name); lab.position.y = 2.5; o.g.add(lab);
     Engine.scene.add(o.g);
   }
-  function make(name, gender, x, z) {
-    const o = { name, gender, x, z, yCur: Venue.groundY(x, z), yaw: 0, yawT: 0, target: null, pending: null,
-                seat: null, lastSeat: null, sitT: 0, phase: 0, walk: 0, bubbles: [] };
-    skin(o); list.push(o); return o;
+
+  function make(id, name, gender, x, z) {
+    const o = {
+      id, name, gender, x, z, yCur: Venue.groundY(x, z), yaw: 0, yawT: 0,
+      target: null, pending: null, seat: null, lastSeat: null, sitT: 0,
+      phase: 0, walk: 0, bubbles: []
+    };
+    skin(o);
+    map.set(id, o);
+    list.push(o);
+    return o;
   }
+
+  function remove(id) {
+    const o = map.get(id);
+    if (!o) return;
+    if (o.seat) Seats.stand(o);
+    if (o.g) Engine.scene.remove(o.g);
+    map.delete(id);
+    const idx = list.indexOf(o);
+    if (idx !== -1) list.splice(idx, 1);
+  }
+
   function bubble(o, msg, kind) {
     const text = msg.length > 20 ? msg.slice(0, 20) + '…' : msg;
     const s = textSprite(text, STYLE[kind || 'chat']);
     o.g.add(s); o.bubbles.unshift({ s, t: 0 });
     if (o.bubbles.length > 4) o.g.remove(o.bubbles.pop().s);
   }
+
   function tickBubbles(o, dt) {
     for (let i = o.bubbles.length - 1; i >= 0; i--) {
       const b = o.bubbles[i]; b.t += dt;
@@ -559,6 +568,7 @@ const Actors = (() => {
       if (b.t > 4.8) { o.g.remove(b.s); b.s.material.map.dispose(); b.s.material.dispose(); o.bubbles.splice(i, 1); }
     }
   }
+
   function step(o, dt, dir) {
     o.sitT = clamp(o.sitT + (o.seat ? 1 : -1) * dt * 3, 0, 1);
     let moving = false;
@@ -569,7 +579,14 @@ const Actors = (() => {
         const ex = o.target.x - o.x, ez = o.target.z - o.z, d = Math.hypot(ex, ez);
         if (d < 0.1) {
           o.target = null;
-          if (o.pending) { const s = o.pending; o.pending = null; if (!Seats.sit(o, s) && o === me) UI.toast('這個座位剛被人坐走了'); }
+          if (o.pending) {
+            const s = o.pending; o.pending = null;
+            if (Seats.sit(o, s)) {
+              if (o === me) Socket.emitSit(s.id);
+            } else if (o === me) {
+              UI.toast('這個座位剛被人坐走了');
+            }
+          }
         } else { dx = ex / d; dz = ez / d; st = Math.min(st, d); }
       }
       if (dx || dz) {
@@ -598,11 +615,136 @@ const Actors = (() => {
     p.armL.rotation.x = -sw - e * 0.4; p.armR.rotation.x = sw - e * 0.4;
     tickBubbles(o, dt);
   }
-  return { list, make, skin, bubble, step };
+
+  return { map, list, make, remove, skin, bubble, step };
+})();
+
+/* =====================================================================
+   6.5 Socket: 即時連線網路模組
+   ===================================================================== */
+const Socket = (() => {
+  let ioSocket = null;
+  let moveTimer = 0;
+
+  function init() {
+    // 預設連接當前主機 (支援 localhost 與正式伺服器部署)
+    ioSocket = io('https://t1-party.onrender.com');
+
+    // 收到當前房間所有人資料
+    ioSocket.on('current_players', (players) => {
+      for (const id in players) {
+        if (id === ioSocket.id) continue;
+        const p = players[id];
+        const actor = Actors.make(p.id, p.name, p.gender, p.x, p.z);
+        if (p.seatId !== null && Venue.seats[p.seatId]) {
+          Seats.sit(actor, Venue.seats[p.seatId]);
+        }
+      }
+    });
+
+    // 新玩家加入
+    ioSocket.on('player_joined', (p) => {
+      if (p.id === ioSocket.id) return;
+      Actors.make(p.id, p.name, p.gender, p.x, p.z);
+      Chat.add('', `${p.name} 進入了影廳`, true);
+    });
+
+    // 其他玩家移動
+    ioSocket.on('player_moved', (data) => {
+      const actor = Actors.map.get(data.id);
+      if (actor) {
+        if (actor.seat) Seats.stand(actor);
+        actor.target = { x: data.x, z: data.z };
+        actor.yawT = data.yaw;
+      }
+    });
+
+    // 其他玩家坐下
+    ioSocket.on('player_sat', (data) => {
+      const actor = Actors.map.get(data.id);
+      const seat = Venue.seats[data.seatId];
+      if (actor && seat) {
+        Seats.sit(actor, seat);
+      }
+    });
+
+    // 其他玩家起立
+    ioSocket.on('player_stood', (data) => {
+      const actor = Actors.map.get(data.id);
+      if (actor) {
+        Seats.stand(actor);
+        if (data.x !== undefined && data.z !== undefined) {
+          actor.x = data.x; actor.z = data.z;
+        }
+      }
+    });
+
+    // 其他玩家發言/應援
+    ioSocket.on('player_spoken', (data) => {
+      const actor = Actors.map.get(data.id);
+      if (actor) {
+        Actors.bubble(actor, data.msg, data.kind);
+        if (data.kind === 'chat') {
+          Chat.add(data.name, data.msg);
+        } else if (data.kind === 'cheer') {
+          FX.burst({ x: actor.g.position.x, y: actor.g.position.y + 1.4, z: actor.g.position.z }, data.fx);
+        }
+      }
+    });
+
+    // 其他玩家更新暱稱/性別
+    ioSocket.on('profile_updated', (data) => {
+      const actor = Actors.map.get(data.id);
+      if (actor) {
+        actor.name = data.name;
+        actor.gender = data.gender;
+        Actors.skin(actor);
+      }
+    });
+
+    // 玩家離線
+    ioSocket.on('player_left', (data) => {
+      Actors.remove(data.id);
+      Chat.add('', `${data.name || '一名玩家'} 離開了影廳`, true);
+    });
+  }
+
+  function join(name, gender) {
+    if (!ioSocket) init();
+    ioSocket.emit('join_room', { name, gender, x: me.x, z: me.z, yaw: me.yaw });
+  }
+
+  function updateMove(dt) {
+    if (!me || !ioSocket) return;
+    moveTimer += dt;
+    // 每 0.1 秒向後端同步一次座標，節省頻寬
+    if (moveTimer > 0.1 && (me.target || me.walk > 0.1)) {
+      moveTimer = 0;
+      ioSocket.emit('player_move', { x: me.x, z: me.z, yaw: me.yaw });
+    }
+  }
+
+  function emitSit(seatId) {
+    if (ioSocket) ioSocket.emit('player_sit', { seatId, x: me.x, z: me.z });
+  }
+
+  function emitStand() {
+    if (ioSocket) ioSocket.emit('player_stand', { x: me.x, z: me.z });
+  }
+
+  function emitSpeak(msg, kind, fx) {
+    if (ioSocket) ioSocket.emit('player_speak', { msg, kind, fx });
+  }
+
+  function emitProfile(name, gender) {
+    if (ioSocket) ioSocket.emit('update_profile', { name, gender });
+  }
+
+  return { init, join, updateMove, emitSit, emitStand, emitSpeak, emitProfile };
 })();
  
 /* =====================================================================
-   7. FX:金光 / 煙火粒子
+   7. FX: 特效系統
    ===================================================================== */
 const FX = (() => {
   const N = 900;
@@ -651,7 +793,7 @@ const FX = (() => {
 })();
  
 /* =====================================================================
-   8. Chat:聊天室(送出後同步顯示在頭頂)
+   8. Chat: 聊天室 (對接 Socket.io)
    ===================================================================== */
 const Chat = (() => {
   const log = $('#chat-log'), input = $('#chat-input');
@@ -668,7 +810,7 @@ const Chat = (() => {
     if (!me) { UI.toast('請先進入影廳'); return; }
     input.value = '';
     add(me.name, text); Actors.bubble(me, text, 'chat');
-    Bus.emit('chat', { name: me.name, text });
+    Socket.emitSpeak(text, 'chat', null);
   }
   $('#chat-send').addEventListener('click', send);
   input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) send(); });
@@ -676,7 +818,7 @@ const Chat = (() => {
 })();
  
 /* =====================================================================
-   9. Player:輸入、點擊移動、坐下 / 起立、應援
+   9. Player: 控制與動作同步
    ===================================================================== */
 const Player = (() => {
   const keys = {}, KEYS = { ArrowUp: 'up', w: 'up', W: 'up', ArrowDown: 'down', s: 'down', S: 'down',
@@ -690,7 +832,6 @@ const Player = (() => {
   });
   addEventListener('keyup', e => { if (KEYS[e.key]) keys[KEYS[e.key]] = false; });
  
-  // 鍵盤移動以「鏡頭方向」為準,環繞到哪邊都順手
   function keyDir() {
     const mx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), mz = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
     if (!mx && !mz) return null;
@@ -699,15 +840,24 @@ const Player = (() => {
     const dx = -fz * mx - fx * mz, dz = fx * mx - fz * mz, n = Math.hypot(dx, dz) || 1;
     return { x: dx / n, z: dz / n };
   }
+
   function goToSeat(s) {
     if (!me || me.seat === s) return;
     if (Seats.taken(s, me)) { UI.toast('這個座位已經有人了'); return; }
-    if (me.seat) Seats.stand(me);
+    if (me.seat) {
+      Seats.stand(me);
+      Socket.emitStand();
+    }
     me.target = Seats.front(s); me.pending = s;
   }
+
   function toggleSit() {
     if (!me) return;
-    if (me.seat) { Seats.stand(me); return; }
+    if (me.seat) {
+      Seats.stand(me);
+      Socket.emitStand();
+      return;
+    }
     let best = null, bd = 1e9;
     for (const s of Venue.seats) {
       if (Seats.taken(s, me)) continue;
@@ -716,14 +866,14 @@ const Player = (() => {
     }
     if (best && bd < 4.5) goToSeat(best); else UI.toast('附近沒有空位,先走到座位區或直接點座位');
   }
+
   function cheer(msg, fx) {
     if (!me) { UI.toast('請先進入影廳'); return; }
     Actors.bubble(me, msg, 'cheer');
     FX.burst({ x: me.g.position.x, y: me.g.position.y + 1.4, z: me.g.position.z }, fx);
-    Bus.emit('cheer', { name: me.name, msg });
+    Socket.emitSpeak(msg, 'cheer', fx);
   }
  
-  // 點擊(位移小於 6px 才算點擊,避免和旋轉衝突)
   let down = null;
   Engine.viewport.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY }; });
   Engine.viewport.addEventListener('pointerup', e => {
@@ -735,7 +885,10 @@ const Player = (() => {
     const hit = ray.intersectObjects([...Venue.seatMeshes, ...Venue.walkables])[0];
     if (!hit) return;
     if (hit.object.userData.seat) { goToSeat(hit.object.userData.seat); return; }
-    if (me.seat) Seats.stand(me);
+    if (me.seat) {
+      Seats.stand(me);
+      Socket.emitStand();
+    }
     me.pending = null;
     me.target = limit(hit.point.x, hit.point.z);
   });
@@ -747,8 +900,16 @@ const Player = (() => {
   function tick(dt) {
     const dir = keyDir();
     if (me) {
-      if (dir) { if (me.seat) Seats.stand(me); me.target = null; me.pending = null; }
+      if (dir) {
+        if (me.seat) {
+          Seats.stand(me);
+          Socket.emitStand();
+        }
+        me.target = null; me.pending = null;
+      }
       Actors.step(me, dt, dir);
+      Socket.updateMove(dt);
+
       const label = me.seat ? '🧍 起立' : '🪑 坐下';
       if ($('#sit-btn').textContent !== label) $('#sit-btn').textContent = label;
     }
@@ -758,7 +919,7 @@ const Player = (() => {
 })();
  
 /* =====================================================================
-   11. UI:角色面板(暱稱 + 性別)、提示、座位統計
+   11. UI 管理
    ===================================================================== */
 const UI = (() => {
   let gender = 'm', toastT;
@@ -774,11 +935,14 @@ const UI = (() => {
   function enter() {
     const name = nameInput.value.trim().slice(0, 12) || ('Fan' + (100 + Math.floor(Math.random() * 900)));
     if (!me) {
-      me = Actors.make(name, gender, (Math.random() - 0.5) * 10, 7 + Math.random() * 2);
+      const myTempId = 'local_me';
+      me = Actors.make(myTempId, name, gender, (Math.random() - 0.5) * 10, 7 + Math.random() * 2);
+      Socket.join(name, gender);
       Chat.add('', `${name} 進入了影廳`, true);
       toast('點座位入座、點地面行走,拖曳畫面可 360° 環繞');
     } else {
-      me.name = name; me.gender = gender; Actors.skin(me);   // 更新暱稱 / 性別,位置與狀態保留
+      me.name = name; me.gender = gender; Actors.skin(me);
+      Socket.emitProfile(name, gender);
       toast('角色已更新');
     }
     $('#enter-btn').textContent = '更新角色';
@@ -801,7 +965,7 @@ const UI = (() => {
 })();
  
 /* =====================================================================
-   12. Boot
+   12. 啟動引擎
    ===================================================================== */
 Venue.build();
 UI.info();
