@@ -169,11 +169,12 @@
       allowfullscreen>
     </iframe>
 
-    <!-- Twitch 播放器 (預設隱藏) -->
+
+   <!-- Twitch 播放器 (同時支援本地與 GitHub Pages 網域) -->
     <iframe 
       id="twitch-player"
       class="hidden"
-      src="https://player.twitch.tv/?channel=lck&parent=localhost&parent=127.0.0.1" 
+      src="https://player.twitch.tv/?channel=lck&parent=peifen-prog.github.io&parent=localhost&parent=127.0.0.1" 
       allowfullscreen>
     </iframe>
   </div>
@@ -228,21 +229,21 @@
       }
       document.getElementById('yt-player').src = `https://www.youtube.com/embed/${videoId}`;
     } else {
-      // 檢查是否包含中文（非 ASCII 字元）
-      const hasChinese = /[\u4e00-\u9fa5]/.test(input);
+        // 檢查是否包含中文（非 ASCII 字元）
+        const hasChinese = /[\u4e00-\u9fa5]/.test(input);
 
-      if (hasChinese) {
-        // 若包含中文，開啟 Twitch 搜尋頁面新視窗
-        window.open(`https://www.twitch.tv/search?term=${encodeURIComponent(input)}`, '_blank');
-      } else {
-        // 若為英文 ID 或網址，直接切換內嵌頻道
-        let channel = input.replace('https://www.twitch.tv/', '').trim();
-        if (channel.includes('?')) {
-          channel = channel.split('?')[0];
+        if (hasChinese) {
+          // 若包含中文，開啟 Twitch 搜尋頁面新視窗
+          window.open(`https://www.twitch.tv/search?term=${encodeURIComponent(input)}`, '_blank');
+        } else {
+          // 若為英文 ID 或網址，直接切換內嵌頻道 (包含 GitHub Pages 網域授權)
+          let channel = input.replace('https://www.twitch.tv/', '').trim();
+          if (channel.includes('?')) {
+            channel = channel.split('?')[0];
+          }
+          document.getElementById('twitch-player').src = `https://player.twitch.tv/?channel=${channel}&parent=peifen-prog.github.io&parent=localhost&parent=127.0.0.1`;
         }
-        document.getElementById('twitch-player').src = `https://player.twitch.tv/?channel=${channel}&parent=localhost&parent=127.0.0.1`;
       }
-    }
   }
 
   function cheer(message) {
