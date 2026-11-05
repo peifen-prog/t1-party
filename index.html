@@ -1,0 +1,266 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LOL Watch Party for T1 Fan</title>
+  <style>
+    body {
+      background-color: #091428;
+      color: #f0e6d2;
+      font-family: "Microsoft JhengHei", Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #c8aa6e;
+      text-shadow: 0 0 10px rgba(200, 170, 110, 0.5);
+      margin-bottom: 15px;
+    }
+
+    /* 平台切換與工具列 */
+    .control-bar {
+      margin-bottom: 15px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .platform-btn {
+      padding: 8px 14px;
+      background: #1e2328;
+      border: 1px solid #c8aa6e;
+      color: #f0e6d2;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .platform-btn.active {
+      background: #c8aa6e;
+      color: #091428;
+    }
+
+    .url-input {
+      padding: 8px 12px;
+      width: 280px;
+      border-radius: 4px;
+      border: 1px solid #c8aa6e;
+      background-color: #1e2328;
+      color: #f0e6d2;
+      outline: none;
+      font-size: 14px;
+    }
+
+    .change-btn {
+      padding: 8px 16px;
+      background: #c8aa6e;
+      color: #091428;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .change-btn:hover {
+      background: #f0e6d2;
+    }
+
+    /* 賽場主大螢幕框 */
+    .screen-container {
+      position: relative;
+      width: 80%;
+      max-width: 800px;
+      aspect-ratio: 16 / 9;
+      border: 4px solid #c8aa6e;
+      box-shadow: 0 0 20px rgba(0, 204, 255, 0.4);
+      border-radius: 8px;
+      overflow: hidden;
+      background-color: #000;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    /* 應援按鈕區 */
+    .cheer-zone {
+      margin-top: 25px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 800px;
+    }
+
+    .cheer-btn {
+      background: linear-gradient(185deg, #1e2328 0%, #111315 100%);
+      border: 2px solid #c8aa6e;
+      color: #f0e6d2;
+      padding: 10px 18px;
+      font-size: 15px;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.1s ease;
+    }
+
+    .cheer-btn:hover {
+      background: #c8aa6e;
+      color: #091428;
+      box-shadow: 0 0 15px rgba(200, 170, 110, 0.8);
+    }
+
+    .cheer-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* 浮動應援文字動畫 */
+    .floating-text {
+      position: fixed;
+      font-size: 26px;
+      font-weight: bold;
+      color: #00ffcc;
+      text-shadow: 0 0 10px #00ffcc, 0 0 20px #00ffcc;
+      pointer-events: none;
+      animation: floatUp 1s ease-out forwards;
+      z-index: 999;
+    }
+
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0) scale(0.8); }
+      50% { transform: translateY(-40px) scale(1.2); }
+      100% { opacity: 0; transform: translateY(-80px) scale(1); }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>LCK / 2026 LOL WORLD 觀賽party</h1>
+
+  <!-- 換影片與平台切換工具列 -->
+  <div class="control-bar">
+    <button id="btn-yt" class="platform-btn active" onclick="switchPlatform('yt')">YouTube</button>
+    <button id="btn-twitch" class="platform-btn" onclick="switchPlatform('twitch')">Twitch 直播</button>
+    
+    <input type="text" id="video-input" class="url-input" placeholder="貼上 YouTube 網址 或 Twitch 頻道名稱">
+    <button class="change-btn" onclick="changeStream()">載入頻道/影片</button>
+  </div>
+
+  <!-- 賽場中央大螢幕 -->
+  <div class="screen-container">
+    <!-- YouTube 播放器 -->
+    <iframe 
+      id="yt-player"
+      src="https://www.youtube.com/embed/qKwWfrVJBpk" 
+      title="YouTube video player" 
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+      referrerpolicy="strict-origin-when-cross-origin" 
+      allowfullscreen>
+    </iframe>
+
+    <!-- Twitch 播放器 (預設隱藏) -->
+    <iframe 
+      id="twitch-player"
+      class="hidden"
+      src="https://player.twitch.tv/?channel=lck&parent=localhost&parent=127.0.0.1" 
+      allowfullscreen>
+    </iframe>
+  </div>
+
+  <!-- 現場應援控制列 -->
+  <div class="cheer-zone">
+    <button class="cheer-btn" onclick="cheer('加油！🔥')">應援 🔥</button>
+    <button class="cheer-btn" onclick="cheer('Penta Kill! ⚡')">五殺 ⚡</button>
+    <button class="cheer-btn" onclick="cheer('Solo kill ⚔️')">單殺 ⚔️</button>
+    <button class="cheer-btn" onclick="cheer('大皇蘭!')">TOP 🛡️</button>
+    <button class="cheer-btn" onclick="cheer('ONER!')">JUG 🌲</button>
+    <button class="cheer-btn" onclick="cheer('大相赫!')">MID 👑</button>
+    <button class="cheer-btn" onclick="cheer('少爺血C!')">ADC 🏹</button>
+    <button class="cheer-btn" onclick="cheer('世一輔!')">SUP 👁️</button>
+  </div>
+
+  <script>
+  let currentPlatform = 'yt';
+
+  function switchPlatform(platform) {
+    currentPlatform = platform;
+    const ytPlayer = document.getElementById('yt-player');
+    const twitchPlayer = document.getElementById('twitch-player');
+    const btnYt = document.getElementById('btn-yt');
+    const btnTwitch = document.getElementById('btn-twitch');
+
+    if (platform === 'yt') {
+      ytPlayer.classList.remove('hidden');
+      twitchPlayer.classList.add('hidden');
+      btnYt.classList.add('active');
+      btnTwitch.classList.remove('active');
+    } else {
+      ytPlayer.classList.add('hidden');
+      twitchPlayer.classList.remove('hidden');
+      btnTwitch.classList.add('active');
+      btnYt.classList.remove('active');
+    }
+  }
+
+  function changeStream() {
+    const input = document.getElementById('video-input').value.trim();
+    if (!input) return;
+
+    if (currentPlatform === 'yt') {
+      let videoId = input;
+      if (input.includes('v=')) {
+        videoId = input.split('v=')[1].split('&')[0];
+      } else if (input.includes('youtu.be/')) {
+        videoId = input.split('youtu.be/')[1].split('?')[0];
+      } else if (input.includes('embed/')) {
+        videoId = input.split('embed/')[1].split('?')[0];
+      }
+      document.getElementById('yt-player').src = `https://www.youtube.com/embed/${videoId}`;
+    } else {
+      // 檢查是否包含中文（非 ASCII 字元）
+      const hasChinese = /[\u4e00-\u9fa5]/.test(input);
+
+      if (hasChinese) {
+        // 若包含中文，開啟 Twitch 搜尋頁面新視窗
+        window.open(`https://www.twitch.tv/search?term=${encodeURIComponent(input)}`, '_blank');
+      } else {
+        // 若為英文 ID 或網址，直接切換內嵌頻道
+        let channel = input.replace('https://www.twitch.tv/', '').trim();
+        if (channel.includes('?')) {
+          channel = channel.split('?')[0];
+        }
+        document.getElementById('twitch-player').src = `https://player.twitch.tv/?channel=${channel}&parent=localhost&parent=127.0.0.1`;
+      }
+    }
+  }
+
+  function cheer(message) {
+    const text = document.createElement('div');
+    text.className = 'floating-text';
+    text.innerText = message;
+    
+    const x = Math.random() * (window.innerWidth - 150);
+    const y = window.innerHeight - 180;
+    text.style.left = `${x}px`;
+    text.style.top = `${y}px`;
+
+    document.body.appendChild(text);
+
+    setTimeout(() => {
+      text.remove();
+    }, 1000);
+  }
+</script>
+</body>
+</html>
